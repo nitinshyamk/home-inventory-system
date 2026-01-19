@@ -1,0 +1,163 @@
+package service
+
+import (
+	"context"
+	"database/sql"
+
+	"home-inventory-system/internal/repository"
+)
+
+// Handler processes queries and commands by transforming them to repository operations
+type Handler struct {
+	repo *repository.Repository
+}
+
+// NewHandler creates a new service handler
+func NewHandler(repo *repository.Repository) *Handler {
+	return &Handler{repo: repo}
+}
+
+// Repository returns the underlying repository (for seed operations)
+func (h *Handler) Repository() *repository.Repository {
+	return h.repo
+}
+
+// HandleQuery processes a query and returns the appropriate result
+func (h *Handler) HandleQuery(ctx context.Context, q Query) QueryResult {
+	switch query := q.(type) {
+	case ListItemsQuery:
+		return h.handleListItems(ctx)
+	case ListItemTypesQuery:
+		return h.handleListItemTypes(ctx)
+	case GetItemQuery:
+		return h.handleGetItem(ctx, query)
+	case GetItemTypeQuery:
+		return h.handleGetItemType(ctx, query)
+	case ListRootTypesQuery:
+		return h.handleListRootTypes(ctx)
+	case ListChildTypesQuery:
+		return h.handleListChildTypes(ctx, query)
+	case GetTypePathQuery:
+		return h.handleGetTypePath(ctx, query)
+	case IsLeafTypeQuery:
+		return h.handleIsLeafType(ctx, query)
+	case ListItemsByTypeQuery:
+		return h.handleListItemsByType(ctx, query)
+	case CountItemsByTypeQuery:
+		return h.handleCountItemsByType(ctx, query)
+	case ListLeafTypesQuery:
+		return h.handleListLeafTypes(ctx)
+	default:
+		return nil
+	}
+}
+
+// HandleCommand processes a command and returns the appropriate result
+func (h *Handler) HandleCommand(ctx context.Context, c Command) CommandResult {
+	switch cmd := c.(type) {
+	case CreateRootTypeCommand:
+		return h.handleCreateRootType(ctx, cmd)
+	case CreateChildTypeCommand:
+		return h.handleCreateChildType(ctx, cmd)
+	case CreateItemCommand:
+		return h.handleCreateItem(ctx, cmd)
+	case DeleteItemCommand:
+		return h.handleDeleteItem(ctx, cmd)
+	case DeleteItemTypeCommand:
+		return h.handleDeleteItemType(ctx, cmd)
+	default:
+		return nil
+	}
+}
+
+// --- Query Handlers ---
+
+func (h *Handler) handleListItems(ctx context.Context) ListItemsResult {
+	items, err := h.repo.ListItemsWithType(ctx)
+	return ListItemsResult{Items: items, Err: err}
+}
+
+func (h *Handler) handleListItemTypes(ctx context.Context) ListItemTypesResult {
+	types, err := h.repo.ListItemTypes(ctx)
+	return ListItemTypesResult{Types: types, Err: err}
+}
+
+func (h *Handler) handleGetItem(ctx context.Context, q GetItemQuery) GetItemResult {
+	item, err := h.repo.GetItem(ctx, q.ID)
+	return GetItemResult{Item: item, Err: err}
+}
+
+func (h *Handler) handleGetItemType(ctx context.Context, q GetItemTypeQuery) GetItemTypeResult {
+	itemType, err := h.repo.GetItemType(ctx, q.ID)
+	return GetItemTypeResult{Type: itemType, Err: err}
+}
+
+func (h *Handler) handleListRootTypes(ctx context.Context) ListRootTypesResult {
+	types, err := h.repo.GetRootTypes(ctx)
+	return ListRootTypesResult{Types: types, Err: err}
+}
+
+func (h *Handler) handleListChildTypes(ctx context.Context, q ListChildTypesQuery) ListChildTypesResult {
+	types, err := h.repo.GetChildTypes(ctx, q.ParentID)
+	return ListChildTypesResult{Types: types, Err: err}
+}
+
+func (h *Handler) handleGetTypePath(ctx context.Context, q GetTypePathQuery) GetTypePathResult {
+	path, err := h.repo.GetTypePath(ctx, q.TypeID)
+	return GetTypePathResult{Path: path, Err: err}
+}
+
+func (h *Handler) handleIsLeafType(ctx context.Context, q IsLeafTypeQuery) IsLeafTypeResult {
+	isLeaf, err := h.repo.IsLeafType(ctx, q.TypeID)
+	return IsLeafTypeResult{IsLeaf: isLeaf, Err: err}
+}
+
+func (h *Handler) handleListItemsByType(ctx context.Context, q ListItemsByTypeQuery) ListItemsByTypeResult {
+	items, err := h.repo.ListItemsByType(ctx, q.TypeID)
+	return ListItemsByTypeResult{Items: items, Err: err}
+}
+
+func (h *Handler) handleCountItemsByType(ctx context.Context, q CountItemsByTypeQuery) CountItemsByTypeResult {
+	count, err := h.repo.CountItemsByType(ctx, q.TypeID)
+	return CountItemsByTypeResult{Count: count, Err: err}
+}
+
+func (h *Handler) handleListLeafTypes(ctx context.Context) ListLeafTypesResult {
+	types, err := h.repo.ListLeafTypes(ctx)
+	return ListLeafTypesResult{Types: types, Err: err}
+}
+
+// --- Command Handlers ---
+
+func (h *Handler) handleCreateRootType(ctx context.Context, cmd CreateRootTypeCommand) CreateRootTypeResult {
+	desc := sql.NullString{}
+	if cmd.Description != "" {
+		desc = sql.NullString{String: cmd.Description, Valid: true}
+	}
+	itemType, err := h.repo.CreateRootType(ctx, cmd.Name, desc)
+	return CreateRootTypeResult{Type: itemType, Err: err}
+}
+
+func (h *Handler) handleCreateChildType(ctx context.Context, cmd CreateChildTypeCommand) CreateChildTypeResult {
+	desc := sql.NullString{}
+	if cmd.Description != "" {
+		desc = sql.NullString{String: cmd.Description, Valid: true}
+	}
+	itemType, err := h.repo.CreateChildType(ctx, cmd.ParentID, cmd.Name, desc)
+	return CreateChildTypeResult{Type: itemType, Err: err}
+}
+
+func (h *Handler) handleCreateItem(ctx context.Context, cmd CreateItemCommand) CreateItemResult {
+	item, err := h.repo.CreateItem(ctx, cmd.Name, cmd.TypeID)
+	return CreateItemResult{Item: item, Err: err}
+}
+
+func (h *Handler) handleDeleteItem(ctx context.Context, cmd DeleteItemCommand) DeleteItemResult {
+	err := h.repo.DeleteItem(ctx, cmd.ID)
+	return DeleteItemResult{Err: err}
+}
+
+func (h *Handler) handleDeleteItemType(ctx context.Context, cmd DeleteItemTypeCommand) DeleteItemTypeResult {
+	err := h.repo.DeleteItemType(ctx, cmd.ID)
+	return DeleteItemTypeResult{Err: err}
+}
