@@ -14,16 +14,6 @@ type Command interface {
 
 // --- Queries ---
 
-// ListItemsQuery requests all items with their type information
-type ListItemsQuery struct{}
-
-func (ListItemsQuery) isQuery() {}
-
-// ListItemTypesQuery requests all item types
-type ListItemTypesQuery struct{}
-
-func (ListItemTypesQuery) isQuery() {}
-
 // GetItemQuery requests a single item by ID
 type GetItemQuery struct {
 	ID int64
@@ -89,22 +79,6 @@ func (ListLeafTypesQuery) isQuery() {}
 type QueryResult interface {
 	isQueryResult()
 }
-
-// ListItemsResult contains the result of ListItemsQuery
-type ListItemsResult struct {
-	Items []repository.ItemWithType
-	Err   error
-}
-
-func (ListItemsResult) isQueryResult() {}
-
-// ListItemTypesResult contains the result of ListItemTypesQuery
-type ListItemTypesResult struct {
-	Types []repository.ItemType
-	Err   error
-}
-
-func (ListItemTypesResult) isQueryResult() {}
 
 // GetItemResult contains the result of GetItemQuery
 type GetItemResult struct {

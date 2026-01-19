@@ -269,14 +269,23 @@ func TestSeedIntegration(t *testing.T) {
 		t.Errorf("expected 3 root types, got %d", len(rootsResult.Types))
 	}
 
-	// Verify items were created
-	itemsResult := handler.HandleQuery(ctx, ListItemsQuery{}).(ListItemsResult)
-	if itemsResult.Err != nil {
-		t.Fatalf("unexpected error: %v", itemsResult.Err)
+	// Verify items were created by counting items at all leaf types
+	leafResult := handler.HandleQuery(ctx, ListLeafTypesQuery{}).(ListLeafTypesResult)
+	if leafResult.Err != nil {
+		t.Fatalf("unexpected error: %v", leafResult.Err)
+	}
+
+	var totalItems int64
+	for _, leafType := range leafResult.Types {
+		countResult := handler.HandleQuery(ctx, CountItemsByTypeQuery{TypeID: leafType.ID}).(CountItemsByTypeResult)
+		if countResult.Err != nil {
+			t.Fatalf("unexpected error counting items for type %d: %v", leafType.ID, countResult.Err)
+		}
+		totalItems += countResult.Count
 	}
 
 	// Should have many items from the seed
-	if len(itemsResult.Items) < 30 {
-		t.Errorf("expected at least 30 items, got %d", len(itemsResult.Items))
+	if totalItems < 30 {
+		t.Errorf("expected at least 30 items, got %d", totalItems)
 	}
 }

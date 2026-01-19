@@ -120,9 +120,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleTypeSelected(msg)
 
 	case messages.ErrorMsg:
-		m.state = StateError
-		m.err = msg.Err
-		return m, nil
+		return m.setError(msg.Err)
 	}
 
 	// Pass messages to item list when in browsing state
@@ -132,6 +130,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	return m, nil
+}
+
+// setError transitions the model to error state and returns it
+func (m Model) setError(err error) (tea.Model, tea.Cmd) {
+	m.state = StateError
+	m.err = err
 	return m, nil
 }
 
@@ -159,9 +164,7 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleTypesLoaded(msg messages.TypesLoadedMsg) (tea.Model, tea.Cmd) {
 	if msg.Err != nil {
-		m.state = StateError
-		m.err = msg.Err
-		return m, nil
+		return m.setError(msg.Err)
 	}
 
 	m.itemList.SetTypes(msg.Types)
@@ -179,9 +182,7 @@ func (m Model) handleTypesLoaded(msg messages.TypesLoadedMsg) (tea.Model, tea.Cm
 
 func (m Model) handleLeafItemsLoaded(msg messages.LeafItemsLoadedMsg) (tea.Model, tea.Cmd) {
 	if msg.Err != nil {
-		m.state = StateError
-		m.err = msg.Err
-		return m, nil
+		return m.setError(msg.Err)
 	}
 
 	m.items = msg.Items
@@ -203,14 +204,11 @@ func (m Model) handleTypeSelected(msg messages.TypeSelectedMsg) (tea.Model, tea.
 	// Check if this is a leaf type (no children)
 	result := m.handler.HandleQuery(context.Background(), service.IsLeafTypeQuery{TypeID: msg.Type.ID})
 	leafResult, ok := result.(service.IsLeafTypeResult)
-	if !ok || leafResult.Err != nil {
-		m.state = StateError
-		if ok {
-			m.err = leafResult.Err
-		} else {
-			m.err = fmt.Errorf("failed to check leaf status")
-		}
-		return m, nil
+	if !ok {
+		return m.setError(fmt.Errorf("failed to check leaf status"))
+	}
+	if leafResult.Err != nil {
+		return m.setError(leafResult.Err)
 	}
 
 	if leafResult.IsLeaf {
@@ -226,6 +224,19 @@ func (m Model) handleTypeSelected(msg messages.TypeSelectedMsg) (tea.Model, tea.
 	return m, m.loadChildTypes(msg.Type.ID)
 }
 
+// goToRoot navigates back to the root level
+func (m Model) goToRoot() (tea.Model, tea.Cmd) {
+	m.currentTypeID = nil
+	m.breadcrumb = nil
+	return m, m.loadRootTypes
+}
+
+// goToParent navigates to a specific parent type
+func (m Model) goToParent(parentID int64) (tea.Model, tea.Cmd) {
+	m.currentTypeID = &parentID
+	return m, m.loadChildTypes(parentID)
+}
+
 func (m Model) navigateUp() (tea.Model, tea.Cmd) {
 	if m.state == StateItemSelected {
 		m.state = StateViewingItems
@@ -237,13 +248,9 @@ func (m Model) navigateUp() (tea.Model, tea.Cmd) {
 		// Go back to parent type or types view
 		if len(m.breadcrumb) > 1 {
 			parentType := m.breadcrumb[len(m.breadcrumb)-2]
-			m.currentTypeID = &parentType.ID
-			return m, m.loadChildTypes(parentType.ID)
+			return m.goToParent(parentType.ID)
 		}
-		// Go to root
-		m.currentTypeID = nil
-		m.breadcrumb = nil
-		return m, m.loadRootTypes
+		return m.goToRoot()
 	}
 
 	if m.state == StateBrowsingTypes && m.currentTypeID != nil {
@@ -252,14 +259,10 @@ func (m Model) navigateUp() (tea.Model, tea.Cmd) {
 			// Go to grandparent
 			grandparent := m.breadcrumb[len(m.breadcrumb)-2]
 			if grandparent.ParentID.Valid {
-				m.currentTypeID = &grandparent.ParentID.Int64
-				return m, m.loadChildTypes(grandparent.ParentID.Int64)
+				return m.goToParent(grandparent.ParentID.Int64)
 			}
 		}
-		// Go to root
-		m.currentTypeID = nil
-		m.breadcrumb = nil
-		return m, m.loadRootTypes
+		return m.goToRoot()
 	}
 
 	return m, nil

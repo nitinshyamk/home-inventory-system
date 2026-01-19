@@ -25,10 +25,6 @@ func (h *Handler) Repository() *repository.Repository {
 // HandleQuery processes a query and returns the appropriate result
 func (h *Handler) HandleQuery(ctx context.Context, q Query) QueryResult {
 	switch query := q.(type) {
-	case ListItemsQuery:
-		return h.handleListItems(ctx)
-	case ListItemTypesQuery:
-		return h.handleListItemTypes(ctx)
 	case GetItemQuery:
 		return h.handleGetItem(ctx, query)
 	case GetItemTypeQuery:
@@ -71,16 +67,6 @@ func (h *Handler) HandleCommand(ctx context.Context, c Command) CommandResult {
 }
 
 // --- Query Handlers ---
-
-func (h *Handler) handleListItems(ctx context.Context) ListItemsResult {
-	items, err := h.repo.ListItemsWithType(ctx)
-	return ListItemsResult{Items: items, Err: err}
-}
-
-func (h *Handler) handleListItemTypes(ctx context.Context) ListItemTypesResult {
-	types, err := h.repo.ListItemTypes(ctx)
-	return ListItemTypesResult{Types: types, Err: err}
-}
 
 func (h *Handler) handleGetItem(ctx context.Context, q GetItemQuery) GetItemResult {
 	item, err := h.repo.GetItem(ctx, q.ID)

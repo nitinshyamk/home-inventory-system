@@ -1,4 +1,7 @@
-.PHONY: build run generate clean deps
+.PHONY: build run generate clean deps seed
+
+# Default database path
+DB_PATH ?= ./inventory.db
 
 # Build the application
 build:
@@ -22,3 +25,7 @@ clean:
 
 # Run all setup steps
 setup: deps generate build
+
+# Seed the database with sample data
+seed:
+	go run ./cmd/seed --db-path=$(DB_PATH)

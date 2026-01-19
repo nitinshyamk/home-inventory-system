@@ -8,17 +8,6 @@ import (
 	"home-inventory-system/internal/db/sqlc"
 )
 
-// ItemWithType represents an item with its associated type information
-type ItemWithType struct {
-	ID           int64
-	Name         string
-	TypeID       int64
-	TypeName     string
-	TypeParentID sql.NullInt64
-	TypeDepth    int64
-	CreatedAt    string
-}
-
 // ItemType represents a category of items in a hierarchy
 type ItemType struct {
 	ID          int64
@@ -54,29 +43,6 @@ func New(db *sql.DB) *Repository {
 // DB returns the underlying database connection
 func (r *Repository) DB() *sql.DB {
 	return r.db
-}
-
-// ListItemsWithType returns all items with their type information
-func (r *Repository) ListItemsWithType(ctx context.Context) ([]ItemWithType, error) {
-	rows, err := r.queries.ListItemsWithType(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list items: %w", err)
-	}
-
-	items := make([]ItemWithType, len(rows))
-	for i, row := range rows {
-		items[i] = ItemWithType{
-			ID:           row.ID,
-			Name:         row.Name,
-			TypeID:       row.ItemTypeID,
-			TypeName:     row.TypeName,
-			TypeParentID: row.TypeParentID,
-			TypeDepth:    row.TypeDepth,
-			CreatedAt:    row.CreatedAt,
-		}
-	}
-
-	return items, nil
 }
 
 // ListItemTypes returns all item types
