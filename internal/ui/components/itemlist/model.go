@@ -68,6 +68,12 @@ func New() Model {
 	l.SetFilteringEnabled(true)
 	l.Styles.Title = styles.TitleStyle
 
+	// Use emacs-style keybindings
+	l.KeyMap.CursorUp.SetKeys("up", "ctrl+p")
+	l.KeyMap.CursorDown.SetKeys("down", "ctrl+n")
+	l.KeyMap.GoToStart.SetKeys("home", "ctrl+a")
+	l.KeyMap.GoToEnd.SetKeys("end", "ctrl+e")
+
 	return Model{
 		list: l,
 		mode: ModeTypes,

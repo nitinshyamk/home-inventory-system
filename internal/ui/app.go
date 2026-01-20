@@ -145,10 +145,10 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+c", "q":
 		return m, tea.Quit
 
-	case "esc", "h", "left":
+	case "esc", "ctrl+b", "left":
 		return m.navigateUp()
 
-	case "enter", "l", "right":
+	case "enter", "ctrl+f", "right":
 		return m.selectCurrent()
 	}
 
@@ -362,7 +362,7 @@ func (m Model) viewItemSelected() string {
 	b.WriteString("\n")
 	b.WriteString(styles.DimStyle.Render(fmt.Sprintf("Created: %s", m.selectedItem.CreatedAt)))
 	b.WriteString("\n\n")
-	b.WriteString(styles.HelpStyle.Render("Press ESC/h/← to go back, q to quit"))
+	b.WriteString(styles.HelpStyle.Render("Press ESC/C-b/← to go back, q to quit"))
 
 	return b.String()
 }
@@ -395,9 +395,9 @@ func (m Model) renderBreadcrumb() string {
 
 func (m Model) viewHelp() string {
 	if m.state == StateViewingItems {
-		return styles.HelpStyle.Render("j/k/↑/↓: navigate | Enter/l/→: select | ESC/h/←: back | q: quit")
+		return styles.HelpStyle.Render("C-p/C-n/↑/↓: navigate | Enter/C-f/→: select | ESC/C-b/←: back | q: quit")
 	}
-	return styles.HelpStyle.Render("j/k/↑/↓: navigate | Enter/l/→: drill down | ESC/h/←: back | q: quit")
+	return styles.HelpStyle.Render("C-p/C-n/↑/↓: navigate | Enter/C-f/→: drill down | ESC/C-b/←: back | q: quit")
 }
 
 // Run starts the application

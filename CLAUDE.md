@@ -11,6 +11,8 @@ make generate      # Generate SQLC code from queries
 make deps          # Run go mod tidy
 make setup         # Full setup: deps → generate → build
 make clean         # Remove build artifacts
+make test          # Run tests
+make seed          # Seed database with sample data (DB_PATH=./inventory.db)
 ```
 
 Run the compiled binary:
@@ -42,10 +44,11 @@ make generate  # Regenerate after modifying queries
 
 Migrations live in `internal/db/migrations/` and are embedded in the binary. They run automatically on startup.
 
-## UI Navigation
+## UI Navigation (Emacs-style)
 
-- `j/k` or arrows: Navigate list
+- `C-p/C-n` or arrows: Navigate list (up/down)
+- `C-f` or `Enter` or `→`: Select/drill down
+- `C-b` or `Esc` or `←`: Back
+- `C-a/C-e`: Go to start/end of list
 - `/`: Filter items
-- `Enter`: Select item
-- `Esc`: Back to list
 - `q`: Quit
