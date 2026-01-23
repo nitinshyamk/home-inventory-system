@@ -9,7 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"home-inventory-system/internal/repository"
+	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/ui/styles"
 )
 
@@ -23,7 +23,7 @@ const (
 
 // typeItem implements list.Item for item types
 type typeItem struct {
-	data repository.ItemType
+	data domain.ItemType
 }
 
 func (i typeItem) Title() string {
@@ -31,17 +31,14 @@ func (i typeItem) Title() string {
 }
 
 func (i typeItem) Description() string {
-	if i.data.Description.Valid {
-		return i.data.Description.String
-	}
-	return ""
+	return i.data.Description
 }
 
 func (i typeItem) FilterValue() string { return i.data.Name }
 
 // leafItem implements list.Item for items at leaf nodes
 type leafItem struct {
-	data repository.Item
+	data domain.Item
 }
 
 func (i leafItem) Title() string       { return i.data.Name }
@@ -61,8 +58,8 @@ func newCompactDelegate() compactDelegate {
 	}
 }
 
-func (d compactDelegate) Height() int                         { return 1 }
-func (d compactDelegate) Spacing() int                        { return 0 }
+func (d compactDelegate) Height() int                               { return 1 }
+func (d compactDelegate) Spacing() int                              { return 0 }
 func (d compactDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
 
 func (d compactDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -76,9 +73,7 @@ func (d compactDelegate) Render(w io.Writer, m list.Model, index int, item list.
 	// Get description based on item type
 	switch i := item.(type) {
 	case typeItem:
-		if i.data.Description.Valid {
-			desc = i.data.Description.String
-		}
+		desc = i.data.Description
 	case leafItem:
 		desc = i.Description()
 	}
@@ -121,13 +116,11 @@ func (d compactDelegate) truncateOrPad(s string, width int) string {
 
 // Model represents the item list component state
 type Model struct {
-	list          list.Model
-	mode          ListMode
-	types         []repository.ItemType
-	leafItems     []repository.Item
-	selectedType  *repository.ItemType
-	selectedItem  *repository.Item
-	err           error
+	list      list.Model
+	mode      ListMode
+	types     []domain.ItemType
+	leafItems []domain.Item
+	err       error
 }
 
 // New creates a new item list model
@@ -159,7 +152,7 @@ func (m *Model) SetSize(width, height int) {
 }
 
 // SetTypes updates the list with item types for hierarchy browsing
-func (m *Model) SetTypes(types []repository.ItemType) {
+func (m *Model) SetTypes(types []domain.ItemType) {
 	m.types = types
 	m.mode = ModeTypes
 	m.list.Title = "Categories"
@@ -173,7 +166,7 @@ func (m *Model) SetTypes(types []repository.ItemType) {
 }
 
 // SetLeafItems updates the list with items at a leaf node
-func (m *Model) SetLeafItems(items []repository.Item) {
+func (m *Model) SetLeafItems(items []domain.Item) {
 	m.leafItems = items
 	m.mode = ModeItems
 	m.list.Title = "Items"
@@ -192,7 +185,7 @@ func (m *Model) SetError(err error) {
 }
 
 // SelectedType returns the currently selected type, if any
-func (m *Model) SelectedType() *repository.ItemType {
+func (m *Model) SelectedType() *domain.ItemType {
 	if m.mode != ModeTypes {
 		return nil
 	}
@@ -203,7 +196,7 @@ func (m *Model) SelectedType() *repository.ItemType {
 }
 
 // SelectedLeafItem returns the currently selected leaf item, if any
-func (m *Model) SelectedLeafItem() *repository.Item {
+func (m *Model) SelectedLeafItem() *domain.Item {
 	if m.mode != ModeItems {
 		return nil
 	}
@@ -211,12 +204,6 @@ func (m *Model) SelectedLeafItem() *repository.Item {
 		return &selectedItem.data
 	}
 	return nil
-}
-
-// ClearSelection clears the current selection
-func (m *Model) ClearSelection() {
-	m.selectedType = nil
-	m.selectedItem = nil
 }
 
 // Mode returns the current display mode

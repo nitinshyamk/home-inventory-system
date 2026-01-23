@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"home-inventory-system/internal/repository"
+	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/service"
 	"home-inventory-system/internal/ui/components/itemlist"
 	"home-inventory-system/internal/ui/messages"
@@ -33,10 +33,10 @@ type Model struct {
 	err           error
 	width         int
 	height        int
-	breadcrumb    []repository.ItemType // Current path in hierarchy
-	currentTypeID *int64                // nil = root level
-	items         []repository.Item     // Items at current leaf node
-	selectedItem  *repository.Item
+	breadcrumb    []domain.ItemType // Current path in hierarchy
+	currentTypeID *int64            // nil = root level
+	items         []domain.Item     // Items at current leaf node
+	selectedItem  *domain.Item
 }
 
 // NewModel creates a new application model
@@ -258,8 +258,8 @@ func (m Model) navigateUp() (tea.Model, tea.Cmd) {
 		if len(m.breadcrumb) > 1 {
 			// Go to grandparent
 			grandparent := m.breadcrumb[len(m.breadcrumb)-2]
-			if grandparent.ParentID.Valid {
-				return m.goToParent(grandparent.ParentID.Int64)
+			if grandparent.ParentID != nil {
+				return m.goToParent(*grandparent.ParentID)
 			}
 		}
 		return m.goToRoot()
@@ -293,9 +293,9 @@ func (m Model) View() string {
 	case StateLoading:
 		return m.viewLoading()
 	case StateBrowsingTypes:
-		return m.viewBrowsingTypes()
+		return m.renderMainView(m.itemList.View())
 	case StateViewingItems:
-		return m.viewItems()
+		return m.renderMainView(m.itemList.View())
 	case StateItemSelected:
 		return m.viewItemSelected()
 	case StateError:
@@ -309,43 +309,20 @@ func (m Model) viewLoading() string {
 	return styles.TitleStyle.Render("Loading inventory...")
 }
 
-func (m Model) viewBrowsingTypes() string {
+// renderMainView renders the common layout with breadcrumb, content, and help
+func (m Model) renderMainView(content string) string {
 	var b strings.Builder
-
-	// Breadcrumb
 	b.WriteString(m.renderBreadcrumb())
 	b.WriteString("\n\n")
-
-	// List
-	b.WriteString(m.itemList.View())
+	b.WriteString(content)
 	b.WriteString("\n")
-
-	// Help
 	b.WriteString(m.viewHelp())
-
-	return b.String()
-}
-
-func (m Model) viewItems() string {
-	var b strings.Builder
-
-	// Breadcrumb
-	b.WriteString(m.renderBreadcrumb())
-	b.WriteString("\n\n")
-
-	// Items list
-	b.WriteString(m.itemList.View())
-	b.WriteString("\n")
-
-	// Help
-	b.WriteString(m.viewHelp())
-
 	return b.String()
 }
 
 func (m Model) viewItemSelected() string {
 	if m.selectedItem == nil {
-		return m.viewItems()
+		return m.renderMainView(m.itemList.View())
 	}
 
 	var b strings.Builder

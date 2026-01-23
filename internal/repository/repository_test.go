@@ -44,7 +44,7 @@ func TestCreateRootType(t *testing.T) {
 
 	ctx := context.Background()
 
-	itemType, err := repo.CreateRootType(ctx, "Electronics", sql.NullString{String: "Electronic devices", Valid: true})
+	itemType, err := repo.CreateRootType(ctx, "Electronics", "Electronic devices")
 	if err != nil {
 		t.Fatalf("failed to create root type: %v", err)
 	}
@@ -55,8 +55,8 @@ func TestCreateRootType(t *testing.T) {
 	if itemType.Depth != 0 {
 		t.Errorf("expected depth 0, got %d", itemType.Depth)
 	}
-	if itemType.ParentID.Valid {
-		t.Error("expected parent_id to be NULL for root type")
+	if itemType.ParentID != nil {
+		t.Error("expected parent_id to be nil for root type")
 	}
 }
 
@@ -67,13 +67,13 @@ func TestCreateChildType(t *testing.T) {
 	ctx := context.Background()
 
 	// Create root type
-	root, err := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	root, err := repo.CreateRootType(ctx, "Kitchen", "")
 	if err != nil {
 		t.Fatalf("failed to create root type: %v", err)
 	}
 
 	// Create child type
-	child, err := repo.CreateChildType(ctx, root.ID, "Pantry Items", sql.NullString{})
+	child, err := repo.CreateChildType(ctx, root.ID, "Pantry Items", "")
 	if err != nil {
 		t.Fatalf("failed to create child type: %v", err)
 	}
@@ -81,12 +81,12 @@ func TestCreateChildType(t *testing.T) {
 	if child.Depth != 1 {
 		t.Errorf("expected depth 1, got %d", child.Depth)
 	}
-	if !child.ParentID.Valid || child.ParentID.Int64 != root.ID {
+	if child.ParentID == nil || *child.ParentID != root.ID {
 		t.Errorf("expected parent_id %d, got %v", root.ID, child.ParentID)
 	}
 
 	// Create grandchild
-	grandchild, err := repo.CreateChildType(ctx, child.ID, "Spices", sql.NullString{})
+	grandchild, err := repo.CreateChildType(ctx, child.ID, "Spices", "")
 	if err != nil {
 		t.Fatalf("failed to create grandchild type: %v", err)
 	}
@@ -103,17 +103,17 @@ func TestGetRootTypes(t *testing.T) {
 	ctx := context.Background()
 
 	// Create multiple root types
-	_, err := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	_, err := repo.CreateRootType(ctx, "Kitchen", "")
 	if err != nil {
 		t.Fatalf("failed to create root type: %v", err)
 	}
-	root2, err := repo.CreateRootType(ctx, "Garage", sql.NullString{})
+	root2, err := repo.CreateRootType(ctx, "Garage", "")
 	if err != nil {
 		t.Fatalf("failed to create root type: %v", err)
 	}
 
 	// Create a child under root2
-	_, err = repo.CreateChildType(ctx, root2.ID, "Tools", sql.NullString{})
+	_, err = repo.CreateChildType(ctx, root2.ID, "Tools", "")
 	if err != nil {
 		t.Fatalf("failed to create child type: %v", err)
 	}
@@ -135,16 +135,16 @@ func TestGetChildTypes(t *testing.T) {
 
 	ctx := context.Background()
 
-	root, err := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	root, err := repo.CreateRootType(ctx, "Kitchen", "")
 	if err != nil {
 		t.Fatalf("failed to create root type: %v", err)
 	}
 
-	_, err = repo.CreateChildType(ctx, root.ID, "Pantry Items", sql.NullString{})
+	_, err = repo.CreateChildType(ctx, root.ID, "Pantry Items", "")
 	if err != nil {
 		t.Fatalf("failed to create child type: %v", err)
 	}
-	_, err = repo.CreateChildType(ctx, root.ID, "Appliances", sql.NullString{})
+	_, err = repo.CreateChildType(ctx, root.ID, "Appliances", "")
 	if err != nil {
 		t.Fatalf("failed to create child type: %v", err)
 	}
@@ -166,17 +166,17 @@ func TestGetTypePath(t *testing.T) {
 	ctx := context.Background()
 
 	// Create hierarchy: Kitchen > Pantry Items > Spices
-	kitchen, err := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	kitchen, err := repo.CreateRootType(ctx, "Kitchen", "")
 	if err != nil {
 		t.Fatalf("failed to create kitchen: %v", err)
 	}
 
-	pantry, err := repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", sql.NullString{})
+	pantry, err := repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", "")
 	if err != nil {
 		t.Fatalf("failed to create pantry: %v", err)
 	}
 
-	spices, err := repo.CreateChildType(ctx, pantry.ID, "Spices", sql.NullString{})
+	spices, err := repo.CreateChildType(ctx, pantry.ID, "Spices", "")
 	if err != nil {
 		t.Fatalf("failed to create spices: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestIsLeafType(t *testing.T) {
 
 	ctx := context.Background()
 
-	root, err := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	root, err := repo.CreateRootType(ctx, "Kitchen", "")
 	if err != nil {
 		t.Fatalf("failed to create root: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestIsLeafType(t *testing.T) {
 	}
 
 	// Add a child
-	child, err := repo.CreateChildType(ctx, root.ID, "Pantry", sql.NullString{})
+	child, err := repo.CreateChildType(ctx, root.ID, "Pantry", "")
 	if err != nil {
 		t.Fatalf("failed to create child: %v", err)
 	}
@@ -255,12 +255,12 @@ func TestItemOnlyOnLeafNodes(t *testing.T) {
 	ctx := context.Background()
 
 	// Create hierarchy: Kitchen > Pantry Items
-	kitchen, err := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	kitchen, err := repo.CreateRootType(ctx, "Kitchen", "")
 	if err != nil {
 		t.Fatalf("failed to create kitchen: %v", err)
 	}
 
-	pantry, err := repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", sql.NullString{})
+	pantry, err := repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", "")
 	if err != nil {
 		t.Fatalf("failed to create pantry: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestCannotAddChildToNodeWithItems(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a root type
-	kitchen, err := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	kitchen, err := repo.CreateRootType(ctx, "Kitchen", "")
 	if err != nil {
 		t.Fatalf("failed to create kitchen: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestCannotAddChildToNodeWithItems(t *testing.T) {
 	}
 
 	// Now try to add a child - should fail because there are items
-	_, err = repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", sql.NullString{})
+	_, err = repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", "")
 	if err == nil {
 		t.Error("expected error when adding child to node with items")
 	}
@@ -314,10 +314,10 @@ func TestListLeafTypes(t *testing.T) {
 
 	// Create hierarchy: Kitchen > Pantry Items > Spices
 	//                         > Appliances
-	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
-	pantry, _ := repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", sql.NullString{})
-	_, _ = repo.CreateChildType(ctx, pantry.ID, "Spices", sql.NullString{})
-	_, _ = repo.CreateChildType(ctx, kitchen.ID, "Appliances", sql.NullString{})
+	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
+	pantry, _ := repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", "")
+	_, _ = repo.CreateChildType(ctx, pantry.ID, "Spices", "")
+	_, _ = repo.CreateChildType(ctx, kitchen.ID, "Appliances", "")
 
 	leaves, err := repo.ListLeafTypes(ctx)
 	if err != nil {
@@ -337,10 +337,10 @@ func TestGetTypeDescendants(t *testing.T) {
 	ctx := context.Background()
 
 	// Create hierarchy
-	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
-	pantry, _ := repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", sql.NullString{})
-	_, _ = repo.CreateChildType(ctx, pantry.ID, "Spices", sql.NullString{})
-	_, _ = repo.CreateChildType(ctx, pantry.ID, "Grains", sql.NullString{})
+	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
+	pantry, _ := repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", "")
+	_, _ = repo.CreateChildType(ctx, pantry.ID, "Spices", "")
+	_, _ = repo.CreateChildType(ctx, pantry.ID, "Grains", "")
 
 	// Get all descendants of kitchen
 	descendants, err := repo.GetTypeDescendants(ctx, kitchen.ID)
@@ -372,8 +372,8 @@ func TestDeleteItemTypeWithChildren(t *testing.T) {
 	ctx := context.Background()
 
 	// Create hierarchy
-	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
-	_, _ = repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", sql.NullString{})
+	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
+	_, _ = repo.CreateChildType(ctx, kitchen.ID, "Pantry Items", "")
 
 	// Try to delete kitchen - should fail because it has children (RESTRICT)
 	err := repo.DeleteItemType(ctx, kitchen.ID)
@@ -389,7 +389,7 @@ func TestDeleteItemTypeWithItems(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a leaf type with an item
-	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
 	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID)
 
 	// Try to delete kitchen - should fail because it has items (RESTRICT)
@@ -405,7 +405,7 @@ func TestCountItemsByType(t *testing.T) {
 
 	ctx := context.Background()
 
-	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
 	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID)
 	_, _ = repo.CreateItem(ctx, "Fork", kitchen.ID)
 	_, _ = repo.CreateItem(ctx, "Knife", kitchen.ID)
@@ -426,7 +426,7 @@ func TestListItemsByType(t *testing.T) {
 
 	ctx := context.Background()
 
-	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
 	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID)
 	_, _ = repo.CreateItem(ctx, "Fork", kitchen.ID)
 
@@ -447,31 +447,31 @@ func TestUniqueNamePerParent(t *testing.T) {
 	ctx := context.Background()
 
 	// Create two root types with same name - should fail
-	_, err := repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	_, err := repo.CreateRootType(ctx, "Kitchen", "")
 	if err != nil {
 		t.Fatalf("failed to create first kitchen: %v", err)
 	}
 
-	_, err = repo.CreateRootType(ctx, "Kitchen", sql.NullString{})
+	_, err = repo.CreateRootType(ctx, "Kitchen", "")
 	if err == nil {
 		t.Error("expected error when creating duplicate root type name")
 	}
 
 	// Create parent and two children with same name - should fail
-	parent, _ := repo.CreateRootType(ctx, "Home", sql.NullString{})
-	_, err = repo.CreateChildType(ctx, parent.ID, "Room", sql.NullString{})
+	parent, _ := repo.CreateRootType(ctx, "Home", "")
+	_, err = repo.CreateChildType(ctx, parent.ID, "Room", "")
 	if err != nil {
 		t.Fatalf("failed to create first room: %v", err)
 	}
 
-	_, err = repo.CreateChildType(ctx, parent.ID, "Room", sql.NullString{})
+	_, err = repo.CreateChildType(ctx, parent.ID, "Room", "")
 	if err == nil {
 		t.Error("expected error when creating duplicate child type name under same parent")
 	}
 
 	// Same name under different parents should be OK
-	parent2, _ := repo.CreateRootType(ctx, "Office", sql.NullString{})
-	_, err = repo.CreateChildType(ctx, parent2.ID, "Room", sql.NullString{})
+	parent2, _ := repo.CreateRootType(ctx, "Office", "")
+	_, err = repo.CreateChildType(ctx, parent2.ID, "Room", "")
 	if err != nil {
 		t.Errorf("should allow same name under different parents: %v", err)
 	}

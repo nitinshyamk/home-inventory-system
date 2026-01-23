@@ -1,6 +1,6 @@
 package service
 
-import "home-inventory-system/internal/repository"
+import "home-inventory-system/internal/domain"
 
 // Query represents a read-only operation
 type Query interface {
@@ -82,7 +82,7 @@ type QueryResult interface {
 
 // GetItemResult contains the result of GetItemQuery
 type GetItemResult struct {
-	Item *repository.Item
+	Item *domain.Item
 	Err  error
 }
 
@@ -90,7 +90,7 @@ func (GetItemResult) isQueryResult() {}
 
 // GetItemTypeResult contains the result of GetItemTypeQuery
 type GetItemTypeResult struct {
-	Type *repository.ItemType
+	Type *domain.ItemType
 	Err  error
 }
 
@@ -98,7 +98,7 @@ func (GetItemTypeResult) isQueryResult() {}
 
 // ListRootTypesResult contains the result of ListRootTypesQuery
 type ListRootTypesResult struct {
-	Types []repository.ItemType
+	Types []domain.ItemType
 	Err   error
 }
 
@@ -106,7 +106,7 @@ func (ListRootTypesResult) isQueryResult() {}
 
 // ListChildTypesResult contains the result of ListChildTypesQuery
 type ListChildTypesResult struct {
-	Types []repository.ItemType
+	Types []domain.ItemType
 	Err   error
 }
 
@@ -114,7 +114,7 @@ func (ListChildTypesResult) isQueryResult() {}
 
 // GetTypePathResult contains the breadcrumb path result
 type GetTypePathResult struct {
-	Path []repository.ItemType
+	Path []domain.ItemType
 	Err  error
 }
 
@@ -130,7 +130,7 @@ func (IsLeafTypeResult) isQueryResult() {}
 
 // ListItemsByTypeResult contains items for a specific type
 type ListItemsByTypeResult struct {
-	Items []repository.Item
+	Items []domain.Item
 	Err   error
 }
 
@@ -146,7 +146,7 @@ func (CountItemsByTypeResult) isQueryResult() {}
 
 // ListLeafTypesResult contains all leaf types
 type ListLeafTypesResult struct {
-	Types []repository.ItemType
+	Types []domain.ItemType
 	Err   error
 }
 
@@ -202,7 +202,7 @@ type CommandResult interface {
 
 // CreateRootTypeResult contains the created root type
 type CreateRootTypeResult struct {
-	Type *repository.ItemType
+	Type *domain.ItemType
 	Err  error
 }
 
@@ -210,7 +210,7 @@ func (CreateRootTypeResult) isCommandResult() {}
 
 // CreateChildTypeResult contains the created child type
 type CreateChildTypeResult struct {
-	Type *repository.ItemType
+	Type *domain.ItemType
 	Err  error
 }
 
@@ -218,7 +218,7 @@ func (CreateChildTypeResult) isCommandResult() {}
 
 // CreateItemResult contains the created item
 type CreateItemResult struct {
-	Item *repository.Item
+	Item *domain.Item
 	Err  error
 }
 

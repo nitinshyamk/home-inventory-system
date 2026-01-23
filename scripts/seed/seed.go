@@ -4,9 +4,9 @@ package seed
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
+	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/repository"
 )
 
@@ -132,18 +132,13 @@ func SeedHierarchy(ctx context.Context, repo *repository.Repository, h Hierarchy
 
 // insertNode recursively inserts a node and its children/items
 func insertNode(ctx context.Context, repo *repository.Repository, node Node, parentID *int64) error {
-	desc := sql.NullString{}
-	if node.Description != "" {
-		desc = sql.NullString{String: node.Description, Valid: true}
-	}
-
-	var itemType *repository.ItemType
+	var itemType *domain.ItemType
 	var err error
 
 	if parentID == nil {
-		itemType, err = repo.CreateRootType(ctx, node.Name, desc)
+		itemType, err = repo.CreateRootType(ctx, node.Name, node.Description)
 	} else {
-		itemType, err = repo.CreateChildType(ctx, *parentID, node.Name, desc)
+		itemType, err = repo.CreateChildType(ctx, *parentID, node.Name, node.Description)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to create type %s: %w", node.Name, err)

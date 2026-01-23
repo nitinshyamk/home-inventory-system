@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 
 	"home-inventory-system/internal/repository"
 )
@@ -116,20 +115,12 @@ func (h *Handler) handleListLeafTypes(ctx context.Context) ListLeafTypesResult {
 // --- Command Handlers ---
 
 func (h *Handler) handleCreateRootType(ctx context.Context, cmd CreateRootTypeCommand) CreateRootTypeResult {
-	desc := sql.NullString{}
-	if cmd.Description != "" {
-		desc = sql.NullString{String: cmd.Description, Valid: true}
-	}
-	itemType, err := h.repo.CreateRootType(ctx, cmd.Name, desc)
+	itemType, err := h.repo.CreateRootType(ctx, cmd.Name, cmd.Description)
 	return CreateRootTypeResult{Type: itemType, Err: err}
 }
 
 func (h *Handler) handleCreateChildType(ctx context.Context, cmd CreateChildTypeCommand) CreateChildTypeResult {
-	desc := sql.NullString{}
-	if cmd.Description != "" {
-		desc = sql.NullString{String: cmd.Description, Valid: true}
-	}
-	itemType, err := h.repo.CreateChildType(ctx, cmd.ParentID, cmd.Name, desc)
+	itemType, err := h.repo.CreateChildType(ctx, cmd.ParentID, cmd.Name, cmd.Description)
 	return CreateChildTypeResult{Type: itemType, Err: err}
 }
 
