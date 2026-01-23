@@ -2,9 +2,12 @@ package itemlist
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"home-inventory-system/internal/repository"
 	"home-inventory-system/internal/ui/styles"
@@ -45,6 +48,77 @@ func (i leafItem) Title() string       { return i.data.Name }
 func (i leafItem) Description() string { return fmt.Sprintf("ID: %d", i.data.ID) }
 func (i leafItem) FilterValue() string { return i.data.Name }
 
+// compactDelegate is a custom delegate for compact tabular list rendering
+type compactDelegate struct {
+	nameWidth int
+	descWidth int
+}
+
+func newCompactDelegate() compactDelegate {
+	return compactDelegate{
+		nameWidth: 25,
+		descWidth: 35,
+	}
+}
+
+func (d compactDelegate) Height() int                         { return 1 }
+func (d compactDelegate) Spacing() int                        { return 0 }
+func (d compactDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
+
+func (d compactDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	if item == nil {
+		return
+	}
+
+	title := item.FilterValue()
+	var desc string
+
+	// Get description based on item type
+	switch i := item.(type) {
+	case typeItem:
+		if i.data.Description.Valid {
+			desc = i.data.Description.String
+		}
+	case leafItem:
+		desc = i.Description()
+	}
+
+	// Truncate/pad title to fixed width
+	title = d.truncateOrPad(title, d.nameWidth)
+
+	// Truncate/pad description to fixed width
+	desc = d.truncateOrPad(desc, d.descWidth)
+
+	// Style based on selection
+	isSelected := index == m.Index()
+
+	var indicator string
+	var titleStyle, descStyle lipgloss.Style
+
+	if isSelected {
+		indicator = styles.SelectedStyle.Render("│ ")
+		titleStyle = styles.SelectedStyle
+		descStyle = styles.DimStyle.Foreground(lipgloss.Color("205"))
+	} else {
+		indicator = styles.DimStyle.Render("  ")
+		titleStyle = styles.NormalStyle
+		descStyle = styles.DimStyle
+	}
+
+	line := indicator + titleStyle.Render(title) + "  " + descStyle.Render(desc)
+	fmt.Fprint(w, line)
+}
+
+func (d compactDelegate) truncateOrPad(s string, width int) string {
+	if len(s) > width {
+		if width > 3 {
+			return s[:width-3] + "..."
+		}
+		return s[:width]
+	}
+	return s + strings.Repeat(" ", width-len(s))
+}
+
 // Model represents the item list component state
 type Model struct {
 	list          list.Model
@@ -58,14 +132,13 @@ type Model struct {
 
 // New creates a new item list model
 func New() Model {
-	delegate := list.NewDefaultDelegate()
-	delegate.Styles.SelectedTitle = styles.SelectedStyle
-	delegate.Styles.SelectedDesc = styles.DimStyle
+	delegate := newCompactDelegate()
 
 	l := list.New([]list.Item{}, delegate, 0, 0)
 	l.Title = "Categories"
 	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(true)
+	l.SetShowHelp(false)
 	l.Styles.Title = styles.TitleStyle
 
 	// Use emacs-style keybindings

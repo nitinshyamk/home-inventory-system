@@ -358,8 +358,6 @@ func (m Model) viewItemSelected() string {
 	b.WriteString("\n\n")
 	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Name: %s", m.selectedItem.Name)))
 	b.WriteString("\n")
-	b.WriteString(styles.DimStyle.Render(fmt.Sprintf("ID: %d", m.selectedItem.ID)))
-	b.WriteString("\n")
 	b.WriteString(styles.DimStyle.Render(fmt.Sprintf("Created: %s", m.selectedItem.CreatedAt)))
 	b.WriteString("\n\n")
 	b.WriteString(styles.HelpStyle.Render("Press ESC/C-b/← to go back, q to quit"))
