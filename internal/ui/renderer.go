@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/ui/styles"
 )
 
@@ -58,11 +59,31 @@ func renderItemDetails(m Model) string {
 	b.WriteString("\n\n")
 	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Name: %s", m.selectedItem.Name)))
 	b.WriteString("\n")
+	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Quantity: %.1f %s", m.selectedItem.Quantity, m.selectedItem.UnitType)))
+	b.WriteString("\n")
+	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Category: %s", getCategoryPath(m.breadcrumb))))
+	b.WriteString("\n")
 	b.WriteString(styles.DimStyle.Render(fmt.Sprintf("Created: %s", m.selectedItem.CreatedAt)))
 	b.WriteString("\n\n")
 	b.WriteString(styles.HelpStyle.Render("Press ESC/C-b/← to go back, q to quit"))
 
 	return b.String()
+}
+
+// getCategoryPath returns the full category path as a plain string.
+// Example: "Home > Kitchen > Pantry Items > Spices"
+func getCategoryPath(breadcrumb []domain.ItemType) string {
+	if len(breadcrumb) == 0 {
+		return "Home"
+	}
+
+	parts := make([]string, len(breadcrumb)+1)
+	parts[0] = "Home"
+	for i, t := range breadcrumb {
+		parts[i+1] = t.Name
+	}
+
+	return strings.Join(parts, " > ")
 }
 
 // renderError shows error message.
