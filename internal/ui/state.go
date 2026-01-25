@@ -6,10 +6,12 @@ package ui
 type AppState int
 
 const (
-	StateLoading       AppState = iota
-	StateBrowsingTypes          // Navigating the type hierarchy
-	StateViewingItems           // Viewing items at a leaf node
-	StateItemSelected           // Viewing item details
+	StateLoading          AppState = iota
+	StateBrowsingTypes             // Navigating the type hierarchy
+	StateViewingItems              // Viewing items at a leaf node
+	StateItemSelected              // Viewing item details
+	StateCreatingCategory          // Creating a new category via form
+	StateCreatingItem              // Creating a new item via form
 	StateError
 )
 
@@ -24,6 +26,10 @@ func (s AppState) String() string {
 		return "ViewingItems"
 	case StateItemSelected:
 		return "ItemSelected"
+	case StateCreatingCategory:
+		return "CreatingCategory"
+	case StateCreatingItem:
+		return "CreatingItem"
 	case StateError:
 		return "Error"
 	default:
