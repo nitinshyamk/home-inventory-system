@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/ui/styles"
 )
@@ -19,6 +21,8 @@ func renderView(m Model) string {
 		return renderMainView(m)
 	case StateItemSelected:
 		return renderItemDetails(m)
+	case StateCreatingCategory, StateCreatingItem:
+		return renderFormOverlay(m)
 	case StateError:
 		return renderError(m)
 	default:
@@ -102,4 +106,39 @@ func renderHelp(state AppState) string {
 		return styles.HelpStyle.Render("C-p/C-n/↑/↓: navigate | Enter/C-f/→: select | ESC/C-b/←: back | q: quit")
 	}
 	return styles.HelpStyle.Render("C-p/C-n/↑/↓: navigate | Enter/C-f/→: drill down | ESC/C-b/←: back | q: quit")
+}
+
+// renderFormOverlay renders the form as a centered modal overlay.
+func renderFormOverlay(m Model) string {
+	// Calculate form dimensions (adaptive to terminal size)
+	formWidth := min(m.width-4, 60)
+
+	// Create a border style for the modal
+	borderStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("205")).
+		Padding(1, 2).
+		Width(formWidth)
+
+	// Render the form
+	formContent := m.form.View()
+
+	// Apply border
+	formModal := borderStyle.Render(formContent)
+
+	// Center the modal on the screen
+	overlayStyle := lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.height).
+		Align(lipgloss.Center, lipgloss.Center)
+
+	return overlayStyle.Render(formModal)
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
