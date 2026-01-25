@@ -15,5 +15,7 @@ type Item struct {
 	ID         int64
 	Name       string
 	ItemTypeID int64
+	Quantity   float64 // Numeric quantity (supports decimals)
+	UnitType   string  // One of: "Count", "Grams", "Liters"
 	CreatedAt  string
 }

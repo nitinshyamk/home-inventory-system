@@ -1,15 +1,15 @@
 -- name: GetItem :one
-SELECT id, name, item_type_id, created_at
+SELECT id, name, item_type_id, quantity, unit_type, created_at
 FROM items
 WHERE id = ?;
 
 -- name: ListItems :many
-SELECT id, name, item_type_id, created_at
+SELECT id, name, item_type_id, quantity, unit_type, created_at
 FROM items
 ORDER BY name;
 
 -- name: ListItemsByType :many
-SELECT id, name, item_type_id, created_at
+SELECT id, name, item_type_id, quantity, unit_type, created_at
 FROM items
 WHERE item_type_id = ?
 ORDER BY name;
@@ -19,6 +19,8 @@ SELECT
     i.id,
     i.name,
     i.item_type_id,
+    i.quantity,
+    i.unit_type,
     i.created_at,
     t.name as type_name,
     t.parent_id as type_parent_id,
@@ -32,6 +34,8 @@ SELECT
     i.id,
     i.name,
     i.item_type_id,
+    i.quantity,
+    i.unit_type,
     i.created_at,
     t.name as type_name,
     t.parent_id as type_parent_id,
@@ -46,14 +50,14 @@ FROM items
 WHERE item_type_id = ?;
 
 -- name: CreateItem :one
-INSERT INTO items (name, item_type_id)
-VALUES (?, ?)
-RETURNING id, name, item_type_id, created_at;
+INSERT INTO items (name, item_type_id, quantity, unit_type)
+VALUES (?, ?, ?, ?)
+RETURNING id, name, item_type_id, quantity, unit_type, created_at;
 
 -- name: DeleteItem :exec
 DELETE FROM items WHERE id = ?;
 
 -- name: UpdateItem :exec
 UPDATE items
-SET name = ?, item_type_id = ?
+SET name = ?, item_type_id = ?, quantity = ?, unit_type = ?
 WHERE id = ?;

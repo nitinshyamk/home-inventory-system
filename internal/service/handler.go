@@ -125,7 +125,7 @@ func (h *Handler) handleCreateChildType(ctx context.Context, cmd CreateChildType
 }
 
 func (h *Handler) handleCreateItem(ctx context.Context, cmd CreateItemCommand) CreateItemResult {
-	item, err := h.repo.CreateItem(ctx, cmd.Name, cmd.TypeID)
+	item, err := h.repo.CreateItem(ctx, cmd.Name, cmd.TypeID, cmd.Quantity, cmd.UnitType)
 	return CreateItemResult{Item: item, Err: err}
 }
 

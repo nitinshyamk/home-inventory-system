@@ -9,10 +9,12 @@ import (
 )
 
 type Item struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	ItemTypeID int64  `json:"item_type_id"`
-	CreatedAt  string `json:"created_at"`
+	ID         int64   `json:"id"`
+	Name       string  `json:"name"`
+	ItemTypeID int64   `json:"item_type_id"`
+	CreatedAt  string  `json:"created_at"`
+	Quantity   float64 `json:"quantity"`
+	UnitType   string  `json:"unit_type"`
 }
 
 type ItemType struct {

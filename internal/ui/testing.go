@@ -58,8 +58,10 @@ func setupTestHandler(t *testing.T) *service.Handler {
 
 	// Create item under Computers (makes it a leaf)
 	itemResult := handler.HandleCommand(ctx, service.CreateItemCommand{
-		Name:   "Laptop",
-		TypeID: 2, // Computers ID
+		Name:     "Laptop",
+		TypeID:   2, // Computers ID
+		Quantity: 1.0,
+		UnitType: "Count",
 	})
 	if result, ok := itemResult.(service.CreateItemResult); ok && result.Err != nil {
 		t.Fatalf("Failed to create Laptop item: %v", result.Err)

@@ -173,8 +173,10 @@ func (CreateChildTypeCommand) isCommand() {}
 
 // CreateItemCommand creates a new item
 type CreateItemCommand struct {
-	Name   string
-	TypeID int64
+	Name     string
+	TypeID   int64
+	Quantity float64 // Numeric quantity (supports decimals)
+	UnitType string  // One of: "Count", "Grams", "Liters"
 }
 
 func (CreateItemCommand) isCommand() {}

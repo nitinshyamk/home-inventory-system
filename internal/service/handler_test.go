@@ -167,7 +167,7 @@ func TestHandleCreateItemCommand(t *testing.T) {
 	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
 
 	// Create an item
-	result := handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID})
+	result := handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: "Count"})
 	itemResult := result.(CreateItemResult)
 	if itemResult.Err != nil {
 		t.Fatalf("unexpected error: %v", itemResult.Err)
@@ -185,8 +185,8 @@ func TestHandleListItemsByTypeQuery(t *testing.T) {
 	ctx := context.Background()
 
 	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID})
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Fork", TypeID: kitchenResult.Type.ID})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: "Count"})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Fork", TypeID: kitchenResult.Type.ID, Quantity: 2.0, UnitType: "Count"})
 
 	result := handler.HandleQuery(ctx, ListItemsByTypeQuery{TypeID: kitchenResult.Type.ID})
 	itemsResult := result.(ListItemsByTypeResult)
@@ -206,9 +206,9 @@ func TestHandleCountItemsByTypeQuery(t *testing.T) {
 	ctx := context.Background()
 
 	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID})
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Fork", TypeID: kitchenResult.Type.ID})
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Knife", TypeID: kitchenResult.Type.ID})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: "Count"})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Fork", TypeID: kitchenResult.Type.ID, Quantity: 2.0, UnitType: "Count"})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Knife", TypeID: kitchenResult.Type.ID, Quantity: 3.0, UnitType: "Count"})
 
 	result := handler.HandleQuery(ctx, CountItemsByTypeQuery{TypeID: kitchenResult.Type.ID})
 	countResult := result.(CountItemsByTypeResult)

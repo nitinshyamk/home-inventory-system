@@ -48,7 +48,7 @@ func (r *Repository) GetItem(ctx context.Context, id int64) (*domain.Item, error
 		return nil, fmt.Errorf("failed to get item: %w", err)
 	}
 
-	item := convertItem(row)
+	item := convertGetItemRow(row)
 	return &item, nil
 }
 
@@ -195,7 +195,7 @@ func (r *Repository) ListItemsByType(ctx context.Context, typeID int64) ([]domai
 
 	items := make([]domain.Item, len(rows))
 	for i, row := range rows {
-		items[i] = convertItem(row)
+		items[i] = convertListItemsByTypeRow(row)
 	}
 
 	return items, nil
@@ -212,16 +212,18 @@ func (r *Repository) CountItemsByType(ctx context.Context, typeID int64) (int64,
 }
 
 // CreateItem creates a new item
-func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64) (*domain.Item, error) {
+func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64, quantity float64, unitType string) (*domain.Item, error) {
 	row, err := r.queries.CreateItem(ctx, sqlc.CreateItemParams{
 		Name:       name,
 		ItemTypeID: typeID,
+		Quantity:   quantity,
+		UnitType:   unitType,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
 
-	item := convertItem(row)
+	item := convertCreateItemRow(row)
 	return &item, nil
 }
 
@@ -302,12 +304,38 @@ func convertItemTypes(rows []sqlc.ItemType) []domain.ItemType {
 	return types
 }
 
-// convertItem converts a sqlc.Item to a domain.Item
-func convertItem(row sqlc.Item) domain.Item {
+// convertGetItemRow converts a GetItemRow to a domain.Item
+func convertGetItemRow(row sqlc.GetItemRow) domain.Item {
 	return domain.Item{
 		ID:         row.ID,
 		Name:       row.Name,
 		ItemTypeID: row.ItemTypeID,
+		Quantity:   row.Quantity,
+		UnitType:   row.UnitType,
+		CreatedAt:  row.CreatedAt,
+	}
+}
+
+// convertCreateItemRow converts a CreateItemRow to a domain.Item
+func convertCreateItemRow(row sqlc.CreateItemRow) domain.Item {
+	return domain.Item{
+		ID:         row.ID,
+		Name:       row.Name,
+		ItemTypeID: row.ItemTypeID,
+		Quantity:   row.Quantity,
+		UnitType:   row.UnitType,
+		CreatedAt:  row.CreatedAt,
+	}
+}
+
+// convertListItemsByTypeRow converts a ListItemsByTypeRow to a domain.Item
+func convertListItemsByTypeRow(row sqlc.ListItemsByTypeRow) domain.Item {
+	return domain.Item{
+		ID:         row.ID,
+		Name:       row.Name,
+		ItemTypeID: row.ItemTypeID,
+		Quantity:   row.Quantity,
+		UnitType:   row.UnitType,
 		CreatedAt:  row.CreatedAt,
 	}
 }
