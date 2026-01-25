@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"home-inventory-system/internal/db"
+	"home-inventory-system/internal/domain"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -266,7 +267,7 @@ func TestItemOnlyOnLeafNodes(t *testing.T) {
 	}
 
 	// Should be able to create item on leaf node (pantry)
-	item, err := repo.CreateItem(ctx, "Rice", pantry.ID, 1.0, "Count")
+	item, err := repo.CreateItem(ctx, "Rice", pantry.ID, 1.0, domain.UnitTypeCount)
 	if err != nil {
 		t.Fatalf("failed to create item on leaf node: %v", err)
 	}
@@ -275,7 +276,7 @@ func TestItemOnlyOnLeafNodes(t *testing.T) {
 	}
 
 	// Should NOT be able to create item on non-leaf node (kitchen)
-	_, err = repo.CreateItem(ctx, "Invalid Item", kitchen.ID, 1.0, "Count")
+	_, err = repo.CreateItem(ctx, "Invalid Item", kitchen.ID, 1.0, domain.UnitTypeCount)
 	if err == nil {
 		t.Error("expected error when creating item on non-leaf node")
 	}
@@ -294,7 +295,7 @@ func TestCannotAddChildToNodeWithItems(t *testing.T) {
 	}
 
 	// Add an item to it (it's a leaf node)
-	_, err = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, "Count")
+	_, err = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, domain.UnitTypeCount)
 	if err != nil {
 		t.Fatalf("failed to create item: %v", err)
 	}
@@ -390,7 +391,7 @@ func TestDeleteItemTypeWithItems(t *testing.T) {
 
 	// Create a leaf type with an item
 	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
-	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, "Count")
+	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, domain.UnitTypeCount)
 
 	// Try to delete kitchen - should fail because it has items (RESTRICT)
 	err := repo.DeleteItemType(ctx, kitchen.ID)
@@ -406,9 +407,9 @@ func TestCountItemsByType(t *testing.T) {
 	ctx := context.Background()
 
 	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
-	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, "Count")
-	_, _ = repo.CreateItem(ctx, "Fork", kitchen.ID, 2.0, "Count")
-	_, _ = repo.CreateItem(ctx, "Knife", kitchen.ID, 3.0, "Count")
+	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, domain.UnitTypeCount)
+	_, _ = repo.CreateItem(ctx, "Fork", kitchen.ID, 2.0, domain.UnitTypeCount)
+	_, _ = repo.CreateItem(ctx, "Knife", kitchen.ID, 3.0, domain.UnitTypeCount)
 
 	count, err := repo.CountItemsByType(ctx, kitchen.ID)
 	if err != nil {
@@ -427,8 +428,8 @@ func TestListItemsByType(t *testing.T) {
 	ctx := context.Background()
 
 	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
-	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, "Count")
-	_, _ = repo.CreateItem(ctx, "Fork", kitchen.ID, 1.0, "Count")
+	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, domain.UnitTypeCount)
+	_, _ = repo.CreateItem(ctx, "Fork", kitchen.ID, 1.0, domain.UnitTypeCount)
 
 	items, err := repo.ListItemsByType(ctx, kitchen.ID)
 	if err != nil {

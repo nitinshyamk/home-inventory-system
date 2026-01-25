@@ -48,10 +48,10 @@ func (i leafItem) FilterValue() string { return i.data.Name }
 // formatQuantity formats a quantity and unit type for display.
 // This function can be modified to support different formatting styles,
 // unit conversions, or abbreviations in the future.
-func formatQuantity(quantity float64, unitType string) string {
+func formatQuantity(quantity float64, unitType domain.UnitType) string {
 	// Simple format: show one decimal place and the unit
 	// Examples: "50.0 Grams", "1.0 Count", "2.5 Liters"
-	return fmt.Sprintf("%.1f %s", quantity, unitType)
+	return fmt.Sprintf("%.1f %s", quantity, unitType.String())
 }
 
 // compactDelegate is a custom delegate for compact tabular list rendering

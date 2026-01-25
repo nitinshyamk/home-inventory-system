@@ -212,12 +212,12 @@ func (r *Repository) CountItemsByType(ctx context.Context, typeID int64) (int64,
 }
 
 // CreateItem creates a new item
-func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64, quantity float64, unitType string) (*domain.Item, error) {
+func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64, quantity float64, unitType domain.UnitType) (*domain.Item, error) {
 	row, err := r.queries.CreateItem(ctx, sqlc.CreateItemParams{
 		Name:       name,
 		ItemTypeID: typeID,
 		Quantity:   quantity,
-		UnitType:   unitType,
+		UnitType:   unitType.String(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
@@ -311,7 +311,7 @@ func convertGetItemRow(row sqlc.GetItemRow) domain.Item {
 		Name:       row.Name,
 		ItemTypeID: row.ItemTypeID,
 		Quantity:   row.Quantity,
-		UnitType:   row.UnitType,
+		UnitType:   domain.UnitType(row.UnitType),
 		CreatedAt:  row.CreatedAt,
 	}
 }
@@ -323,7 +323,7 @@ func convertCreateItemRow(row sqlc.CreateItemRow) domain.Item {
 		Name:       row.Name,
 		ItemTypeID: row.ItemTypeID,
 		Quantity:   row.Quantity,
-		UnitType:   row.UnitType,
+		UnitType:   domain.UnitType(row.UnitType),
 		CreatedAt:  row.CreatedAt,
 	}
 }
@@ -335,7 +335,7 @@ func convertListItemsByTypeRow(row sqlc.ListItemsByTypeRow) domain.Item {
 		Name:       row.Name,
 		ItemTypeID: row.ItemTypeID,
 		Quantity:   row.Quantity,
-		UnitType:   row.UnitType,
+		UnitType:   domain.UnitType(row.UnitType),
 		CreatedAt:  row.CreatedAt,
 	}
 }

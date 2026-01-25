@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"home-inventory-system/internal/db"
+	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/repository"
 	"home-inventory-system/scripts/seed"
 
@@ -167,7 +168,7 @@ func TestHandleCreateItemCommand(t *testing.T) {
 	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
 
 	// Create an item
-	result := handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: "Count"})
+	result := handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount})
 	itemResult := result.(CreateItemResult)
 	if itemResult.Err != nil {
 		t.Fatalf("unexpected error: %v", itemResult.Err)
@@ -185,8 +186,8 @@ func TestHandleListItemsByTypeQuery(t *testing.T) {
 	ctx := context.Background()
 
 	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: "Count"})
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Fork", TypeID: kitchenResult.Type.ID, Quantity: 2.0, UnitType: "Count"})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Fork", TypeID: kitchenResult.Type.ID, Quantity: 2.0, UnitType: domain.UnitTypeCount})
 
 	result := handler.HandleQuery(ctx, ListItemsByTypeQuery{TypeID: kitchenResult.Type.ID})
 	itemsResult := result.(ListItemsByTypeResult)
@@ -206,9 +207,9 @@ func TestHandleCountItemsByTypeQuery(t *testing.T) {
 	ctx := context.Background()
 
 	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: "Count"})
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Fork", TypeID: kitchenResult.Type.ID, Quantity: 2.0, UnitType: "Count"})
-	handler.HandleCommand(ctx, CreateItemCommand{Name: "Knife", TypeID: kitchenResult.Type.ID, Quantity: 3.0, UnitType: "Count"})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Fork", TypeID: kitchenResult.Type.ID, Quantity: 2.0, UnitType: domain.UnitTypeCount})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Knife", TypeID: kitchenResult.Type.ID, Quantity: 3.0, UnitType: domain.UnitTypeCount})
 
 	result := handler.HandleQuery(ctx, CountItemsByTypeQuery{TypeID: kitchenResult.Type.ID})
 	countResult := result.(CountItemsByTypeResult)

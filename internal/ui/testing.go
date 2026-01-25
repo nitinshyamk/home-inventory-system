@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"home-inventory-system/internal/db"
+	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/repository"
 	"home-inventory-system/internal/service"
 )
@@ -61,7 +62,7 @@ func setupTestHandler(t *testing.T) *service.Handler {
 		Name:     "Laptop",
 		TypeID:   2, // Computers ID
 		Quantity: 1.0,
-		UnitType: "Count",
+		UnitType: domain.UnitTypeCount,
 	})
 	if result, ok := itemResult.(service.CreateItemResult); ok && result.Err != nil {
 		t.Fatalf("Failed to create Laptop item: %v", result.Err)
