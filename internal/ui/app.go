@@ -14,17 +14,6 @@ import (
 	"home-inventory-system/internal/ui/styles"
 )
 
-// AppState represents the current state of the application
-type AppState int
-
-const (
-	StateLoading AppState = iota
-	StateBrowsingTypes  // Navigating the type hierarchy
-	StateViewingItems   // Viewing items at a leaf node
-	StateItemSelected   // Viewing item details
-	StateError
-)
-
 // Model is the main application model
 type Model struct {
 	state         AppState
@@ -124,7 +113,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Pass messages to item list when in browsing state
-	if m.state == StateBrowsingTypes || m.state == StateViewingItems {
+	if m.state.AllowsItemListDelegation() {
 		var cmd tea.Cmd
 		m.itemList, cmd = m.itemList.Update(msg)
 		return m, cmd
@@ -135,7 +124,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // setError transitions the model to error state and returns it
 func (m Model) setError(err error) (tea.Model, tea.Cmd) {
-	m.state = StateError
+	m = transitionTo(m, StateError)
 	m.err = err
 	return m, nil
 }
@@ -153,7 +142,7 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// Pass to itemlist for navigation
-	if m.state == StateBrowsingTypes || m.state == StateViewingItems {
+	if m.state.AllowsItemListDelegation() {
 		var cmd tea.Cmd
 		m.itemList, cmd = m.itemList.Update(msg)
 		return m, cmd
@@ -168,7 +157,7 @@ func (m Model) handleTypesLoaded(msg messages.TypesLoadedMsg) (tea.Model, tea.Cm
 	}
 
 	m.itemList.SetTypes(msg.Types)
-	m.state = StateBrowsingTypes
+	m = transitionTo(m, StateBrowsingTypes)
 	m.currentTypeID = msg.ParentID
 
 	// Load breadcrumb if not at root
@@ -187,7 +176,7 @@ func (m Model) handleLeafItemsLoaded(msg messages.LeafItemsLoadedMsg) (tea.Model
 
 	m.items = msg.Items
 	m.itemList.SetLeafItems(msg.Items)
-	m.state = StateViewingItems
+	m = transitionTo(m, StateViewingItems)
 	return m, nil
 }
 
@@ -239,7 +228,7 @@ func (m Model) goToParent(parentID int64) (tea.Model, tea.Cmd) {
 
 func (m Model) navigateUp() (tea.Model, tea.Cmd) {
 	if m.state == StateItemSelected {
-		m.state = StateViewingItems
+		m = transitionTo(m, StateViewingItems)
 		m.selectedItem = nil
 		return m, nil
 	}
@@ -280,7 +269,7 @@ func (m Model) selectCurrent() (tea.Model, tea.Cmd) {
 		selected := m.itemList.SelectedLeafItem()
 		if selected != nil {
 			m.selectedItem = selected
-			m.state = StateItemSelected
+			m = transitionTo(m, StateItemSelected)
 		}
 	}
 
