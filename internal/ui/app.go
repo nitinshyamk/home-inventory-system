@@ -165,7 +165,7 @@ func (m Model) handleTypesLoaded(msg messages.TypesLoadedMsg) (tea.Model, tea.Cm
 		return m, m.loadBreadcrumb(*msg.ParentID)
 	}
 
-	m.breadcrumb = nil
+	m = clearBreadcrumb(m)
 	return m, nil
 }
 
@@ -185,7 +185,7 @@ func (m Model) handleBreadcrumbLoaded(msg messages.BreadcrumbLoadedMsg) (tea.Mod
 		// Non-fatal, just don't show breadcrumb
 		return m, nil
 	}
-	m.breadcrumb = msg.Path
+	m = setBreadcrumb(m, msg.Path)
 	return m, nil
 }
 
@@ -216,7 +216,7 @@ func (m Model) handleTypeSelected(msg messages.TypeSelectedMsg) (tea.Model, tea.
 // goToRoot navigates back to the root level
 func (m Model) goToRoot() (tea.Model, tea.Cmd) {
 	m.currentTypeID = nil
-	m.breadcrumb = nil
+	m = clearBreadcrumb(m)
 	return m, m.loadRootTypes
 }
 
@@ -235,20 +235,20 @@ func (m Model) navigateUp() (tea.Model, tea.Cmd) {
 
 	if m.state == StateViewingItems {
 		// Go back to parent type or types view
-		if len(m.breadcrumb) > 1 {
-			parentType := m.breadcrumb[len(m.breadcrumb)-2]
-			return m.goToParent(parentType.ID)
+		if parent := getParent(m.breadcrumb); parent != nil {
+			return m.goToParent(parent.ID)
 		}
 		return m.goToRoot()
 	}
 
 	if m.state == StateBrowsingTypes && m.currentTypeID != nil {
 		// Navigate up one level in the type hierarchy
-		if len(m.breadcrumb) > 1 {
-			// Go to grandparent
-			grandparent := m.breadcrumb[len(m.breadcrumb)-2]
-			if grandparent.ParentID != nil {
-				return m.goToParent(*grandparent.ParentID)
+		if !isAtRoot(m.breadcrumb) {
+			// Go to grandparent if available
+			if grandparent := getGrandparent(m.breadcrumb); grandparent != nil {
+				if grandparent.ParentID != nil {
+					return m.goToParent(*grandparent.ParentID)
+				}
 			}
 		}
 		return m.goToRoot()
@@ -301,7 +301,7 @@ func (m Model) viewLoading() string {
 // renderMainView renders the common layout with breadcrumb, content, and help
 func (m Model) renderMainView(content string) string {
 	var b strings.Builder
-	b.WriteString(m.renderBreadcrumb())
+	b.WriteString(renderBreadcrumb(m.breadcrumb))
 	b.WriteString("\n\n")
 	b.WriteString(content)
 	b.WriteString("\n")
@@ -317,7 +317,7 @@ func (m Model) viewItemSelected() string {
 	var b strings.Builder
 
 	// Breadcrumb
-	b.WriteString(m.renderBreadcrumb())
+	b.WriteString(renderBreadcrumb(m.breadcrumb))
 	b.WriteString("\n\n")
 
 	b.WriteString(styles.TitleStyle.Render("Item Details"))
@@ -338,23 +338,6 @@ func (m Model) viewError() string {
 		styles.NormalStyle.Render(m.err.Error()),
 		styles.HelpStyle.Render("Press q to quit"),
 	)
-}
-
-func (m Model) renderBreadcrumb() string {
-	if len(m.breadcrumb) == 0 {
-		return styles.TitleStyle.Render("Home")
-	}
-
-	parts := make([]string, len(m.breadcrumb))
-	for i, t := range m.breadcrumb {
-		if i == len(m.breadcrumb)-1 {
-			parts[i] = styles.SelectedStyle.Render(t.Name)
-		} else {
-			parts[i] = styles.DimStyle.Render(t.Name)
-		}
-	}
-
-	return styles.TitleStyle.Render("Home") + styles.DimStyle.Render(" > ") + strings.Join(parts, styles.DimStyle.Render(" > "))
 }
 
 func (m Model) viewHelp() string {
