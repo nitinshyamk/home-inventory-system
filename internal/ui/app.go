@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -46,44 +45,35 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.itemList.SetSize(msg.Width, msg.Height-6) // Leave room for breadcrumb and help
-		return m, nil
+		return handleWindowResize(m, msg)
 
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
 
 	case messages.TypesLoadedMsg:
-		return m.handleTypesLoaded(msg)
+		return handleTypesLoaded(m, msg)
 
 	case messages.LeafItemsLoadedMsg:
-		return m.handleLeafItemsLoaded(msg)
+		return handleLeafItemsLoaded(m, msg)
 
 	case messages.BreadcrumbLoadedMsg:
-		return m.handleBreadcrumbLoaded(msg)
+		return handleBreadcrumbLoaded(m, msg)
 
 	case messages.TypeSelectedMsg:
-		return m.handleTypeSelected(msg)
+		return handleTypeSelected(m, msg)
+
+	case messages.LeafCheckCompleteMsg:
+		return handleLeafCheckComplete(m, msg)
 
 	case messages.ErrorMsg:
-		return m.setError(msg.Err)
+		return setError(m, msg.Err)
 	}
 
 	// Pass messages to item list when in browsing state
 	if m.state.AllowsItemListDelegation() {
-		var cmd tea.Cmd
-		m.itemList, cmd = m.itemList.Update(msg)
-		return m, cmd
+		return delegateToItemList(m, msg)
 	}
 
-	return m, nil
-}
-
-// setError transitions the model to error state and returns it
-func (m Model) setError(err error) (tea.Model, tea.Cmd) {
-	m = transitionTo(m, StateError)
-	m.err = err
 	return m, nil
 }
 
@@ -107,68 +97,6 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
-}
-
-func (m Model) handleTypesLoaded(msg messages.TypesLoadedMsg) (tea.Model, tea.Cmd) {
-	if msg.Err != nil {
-		return m.setError(msg.Err)
-	}
-
-	m.itemList.SetTypes(msg.Types)
-	m = transitionTo(m, StateBrowsingTypes)
-	m.currentTypeID = msg.ParentID
-
-	// Load breadcrumb if not at root
-	if msg.ParentID != nil {
-		return m, loadBreadcrumb(m.handler, *msg.ParentID)
-	}
-
-	m = clearBreadcrumb(m)
-	return m, nil
-}
-
-func (m Model) handleLeafItemsLoaded(msg messages.LeafItemsLoadedMsg) (tea.Model, tea.Cmd) {
-	if msg.Err != nil {
-		return m.setError(msg.Err)
-	}
-
-	m.items = msg.Items
-	m.itemList.SetLeafItems(msg.Items)
-	m = transitionTo(m, StateViewingItems)
-	return m, nil
-}
-
-func (m Model) handleBreadcrumbLoaded(msg messages.BreadcrumbLoadedMsg) (tea.Model, tea.Cmd) {
-	if msg.Err != nil {
-		// Non-fatal, just don't show breadcrumb
-		return m, nil
-	}
-	m = setBreadcrumb(m, msg.Path)
-	return m, nil
-}
-
-func (m Model) handleTypeSelected(msg messages.TypeSelectedMsg) (tea.Model, tea.Cmd) {
-	// Check if this is a leaf type (no children)
-	result := m.handler.HandleQuery(context.Background(), service.IsLeafTypeQuery{TypeID: msg.Type.ID})
-	leafResult, ok := result.(service.IsLeafTypeResult)
-	if !ok {
-		return m.setError(fmt.Errorf("failed to check leaf status"))
-	}
-	if leafResult.Err != nil {
-		return m.setError(leafResult.Err)
-	}
-
-	if leafResult.IsLeaf {
-		// Load items at this leaf
-		m.currentTypeID = &msg.Type.ID
-		return m, tea.Batch(
-			loadItemsForType(m.handler, msg.Type.ID),
-			loadBreadcrumb(m.handler, msg.Type.ID),
-		)
-	}
-
-	// Not a leaf, load child types
-	return m, loadChildTypes(m.handler, msg.Type.ID)
 }
 
 // goToRoot navigates back to the root level
@@ -219,7 +147,7 @@ func (m Model) selectCurrent() (tea.Model, tea.Cmd) {
 	if m.state == StateBrowsingTypes {
 		selected := m.itemList.SelectedType()
 		if selected != nil {
-			return m.handleTypeSelected(messages.TypeSelectedMsg{Type: *selected})
+			return handleTypeSelected(m, messages.TypeSelectedMsg{Type: *selected})
 		}
 	}
 
