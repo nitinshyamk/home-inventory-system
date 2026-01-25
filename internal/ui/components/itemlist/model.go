@@ -45,13 +45,42 @@ func (i leafItem) Title() string       { return i.data.Name }
 func (i leafItem) Description() string { return formatQuantity(i.data.Quantity, i.data.UnitType) }
 func (i leafItem) FilterValue() string { return i.data.Name }
 
-// formatQuantity formats a quantity and unit type for display.
-// This function can be modified to support different formatting styles,
-// unit conversions, or abbreviations in the future.
+// formatQuantity formats a quantity and unit type for display with automatic unit conversions.
+//
+// Conversion rules:
+// - Count: Rounded to nearest integer (e.g., "5" not "5.0")
+// - Grams: Displays as oz; if >= 16 oz, displays as lbs with decimal (e.g., "1.5 lbs")
+// - Liters: Displays as fl oz; if >= 128 fl oz (1 gallon), displays as gal with decimal (e.g., "2.3 gal")
 func formatQuantity(quantity float64, unitType domain.UnitType) string {
-	// Simple format: show one decimal place and the unit
-	// Examples: "50.0 Grams", "1.0 Count", "2.5 Liters"
-	return fmt.Sprintf("%.1f %s", quantity, unitType.String())
+	switch unitType {
+	case domain.UnitTypeCount:
+		// Round to nearest integer for count
+		return fmt.Sprintf("%d", int(quantity+0.5))
+
+	case domain.UnitTypeGrams:
+		// Convert grams to ounces (1 oz = 28.3495 grams)
+		ounces := quantity / 28.3495
+		if ounces >= 16.0 {
+			// Convert to pounds (16 oz = 1 lb)
+			pounds := ounces / 16.0
+			return fmt.Sprintf("%.1f lbs", pounds)
+		}
+		return fmt.Sprintf("%.1f oz", ounces)
+
+	case domain.UnitTypeLiters:
+		// Convert liters to fluid ounces (1 liter = 33.814 fl oz)
+		fluidOunces := quantity * 33.814
+		if fluidOunces >= 128.0 {
+			// Convert to gallons (128 fl oz = 1 gallon)
+			gallons := fluidOunces / 128.0
+			return fmt.Sprintf("%.1f gal", gallons)
+		}
+		return fmt.Sprintf("%.1f fl oz", fluidOunces)
+
+	default:
+		// Fallback for unknown unit types
+		return fmt.Sprintf("%.1f %s", quantity, unitType.String())
+	}
 }
 
 // compactDelegate is a custom delegate for compact tabular list rendering
