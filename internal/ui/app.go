@@ -83,10 +83,10 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "esc", "ctrl+b", "left":
-		return m.navigateUp()
+		return navigateUp(m)
 
 	case "enter", "ctrl+f", "right":
-		return m.selectCurrent()
+		return selectCurrent(m)
 	}
 
 	// Pass to itemlist for navigation
@@ -94,69 +94,6 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.itemList, cmd = m.itemList.Update(msg)
 		return m, cmd
-	}
-
-	return m, nil
-}
-
-// goToRoot navigates back to the root level
-func (m Model) goToRoot() (tea.Model, tea.Cmd) {
-	m.currentTypeID = nil
-	m = clearBreadcrumb(m)
-	return m, loadRootTypes(m.handler)
-}
-
-// goToParent navigates to a specific parent type
-func (m Model) goToParent(parentID int64) (tea.Model, tea.Cmd) {
-	m.currentTypeID = &parentID
-	return m, loadChildTypes(m.handler, parentID)
-}
-
-func (m Model) navigateUp() (tea.Model, tea.Cmd) {
-	if m.state == StateItemSelected {
-		m = transitionTo(m, StateViewingItems)
-		m.selectedItem = nil
-		return m, nil
-	}
-
-	if m.state == StateViewingItems {
-		// Go back to parent type or types view
-		if parent := getParent(m.breadcrumb); parent != nil {
-			return m.goToParent(parent.ID)
-		}
-		return m.goToRoot()
-	}
-
-	if m.state == StateBrowsingTypes && m.currentTypeID != nil {
-		// Navigate up one level in the type hierarchy
-		if !isAtRoot(m.breadcrumb) {
-			// Go to grandparent if available
-			if grandparent := getGrandparent(m.breadcrumb); grandparent != nil {
-				if grandparent.ParentID != nil {
-					return m.goToParent(*grandparent.ParentID)
-				}
-			}
-		}
-		return m.goToRoot()
-	}
-
-	return m, nil
-}
-
-func (m Model) selectCurrent() (tea.Model, tea.Cmd) {
-	if m.state == StateBrowsingTypes {
-		selected := m.itemList.SelectedType()
-		if selected != nil {
-			return handleTypeSelected(m, messages.TypeSelectedMsg{Type: *selected})
-		}
-	}
-
-	if m.state == StateViewingItems {
-		selected := m.itemList.SelectedLeafItem()
-		if selected != nil {
-			m.selectedItem = selected
-			m = transitionTo(m, StateItemSelected)
-		}
 	}
 
 	return m, nil
