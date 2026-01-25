@@ -3,6 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
+	"home-inventory-system/internal/ui/components/form"
 	"home-inventory-system/internal/ui/messages"
 )
 
@@ -77,6 +78,11 @@ func selectCurrent(m Model) (Model, tea.Cmd) {
 
 // selectType handles selection of a type (triggers leaf check).
 func selectType(m Model) (Model, tea.Cmd) {
+	// Check if "+ Add New Category" is selected
+	if m.itemList.SelectedAddNewCategory() {
+		return openCategoryCreationForm(m)
+	}
+
 	selected := m.itemList.SelectedType()
 	if selected == nil {
 		return m, nil
@@ -87,6 +93,11 @@ func selectType(m Model) (Model, tea.Cmd) {
 
 // selectItem handles selection of an item (shows details).
 func selectItem(m Model) (Model, tea.Cmd) {
+	// Check if "+ Add New Item" is selected
+	if m.itemList.SelectedAddNewItem() {
+		return openItemCreationForm(m)
+	}
+
 	selected := m.itemList.SelectedLeafItem()
 	if selected == nil {
 		return m, nil
@@ -108,4 +119,18 @@ func goToRoot(m Model) (Model, tea.Cmd) {
 func goToParent(m Model, parentID int64) (Model, tea.Cmd) {
 	m.currentTypeID = &parentID
 	return m, loadChildTypes(m.handler, parentID)
+}
+
+// openCategoryCreationForm opens the category creation form modal.
+func openCategoryCreationForm(m Model) (Model, tea.Cmd) {
+	m.form = form.NewCategoryForm(m.width, m.height)
+	m = transitionTo(m, StateCreatingCategory)
+	return m, nil
+}
+
+// openItemCreationForm opens the item creation form modal.
+func openItemCreationForm(m Model) (Model, tea.Cmd) {
+	m.form = form.NewItemForm(m.width, m.height)
+	m = transitionTo(m, StateCreatingItem)
+	return m, nil
 }

@@ -5,6 +5,7 @@ import (
 
 	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/service"
+	"home-inventory-system/internal/ui/components/form"
 	"home-inventory-system/internal/ui/components/itemlist"
 	"home-inventory-system/internal/ui/messages"
 )
@@ -13,6 +14,7 @@ import (
 type Model struct {
 	state         AppState
 	itemList      itemlist.Model
+	form          form.Model
 	handler       *service.Handler
 	err           error
 	width         int
