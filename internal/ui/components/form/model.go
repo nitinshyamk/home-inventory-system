@@ -1,6 +1,8 @@
 package form
 
 import (
+	"strconv"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -57,11 +59,24 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, nil
 
 		case "enter":
-			// If we're on the last field, submit
-			if m.FocusIndex == len(m.Inputs)-1 {
+			// For item forms with unit selector
+			if m.FormType == FormTypeItem && m.FocusIndex == 2 {
+				// On unit selector, Enter submits
 				if m.validate() {
 					m.Submitted = true
 					return m, nil
+				}
+			} else if m.FocusIndex == len(m.Inputs)-1 {
+				// On last text input
+				if m.FormType == FormTypeItem {
+					// Move to unit selector
+					m.FocusIndex = 2
+				} else {
+					// Submit form
+					if m.validate() {
+						m.Submitted = true
+						return m, nil
+					}
 				}
 			} else {
 				// Move to next field
@@ -69,23 +84,67 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				m.updateFocus()
 			}
 
-		case "tab", "down":
+		case "tab":
 			m.FocusIndex++
-			if m.FocusIndex >= len(m.Inputs) {
+			if m.FormType == FormTypeItem && m.FocusIndex > 2 {
+				m.FocusIndex = 0
+			} else if m.FocusIndex >= len(m.Inputs) {
 				m.FocusIndex = 0
 			}
 			m.updateFocus()
 
-		case "shift+tab", "up":
+		case "shift+tab":
 			m.FocusIndex--
 			if m.FocusIndex < 0 {
-				m.FocusIndex = len(m.Inputs) - 1
+				if m.FormType == FormTypeItem {
+					m.FocusIndex = 2
+				} else {
+					m.FocusIndex = len(m.Inputs) - 1
+				}
 			}
 			m.updateFocus()
+
+		case "down":
+			// On unit selector, change selection
+			if m.FormType == FormTypeItem && m.FocusIndex == 2 {
+				m.UnitTypeIndex++
+				if m.UnitTypeIndex >= len(m.UnitTypes) {
+					m.UnitTypeIndex = 0
+				}
+			} else {
+				// Otherwise move to next field
+				m.FocusIndex++
+				if m.FormType == FormTypeItem && m.FocusIndex > 2 {
+					m.FocusIndex = 0
+				} else if m.FocusIndex >= len(m.Inputs) {
+					m.FocusIndex = 0
+				}
+				m.updateFocus()
+			}
+
+		case "up":
+			// On unit selector, change selection
+			if m.FormType == FormTypeItem && m.FocusIndex == 2 {
+				m.UnitTypeIndex--
+				if m.UnitTypeIndex < 0 {
+					m.UnitTypeIndex = len(m.UnitTypes) - 1
+				}
+			} else {
+				// Otherwise move to previous field
+				m.FocusIndex--
+				if m.FocusIndex < 0 {
+					if m.FormType == FormTypeItem {
+						m.FocusIndex = 2
+					} else {
+						m.FocusIndex = len(m.Inputs) - 1
+					}
+				}
+				m.updateFocus()
+			}
 		}
 	}
 
-	// Update the focused input
+	// Update the focused input (only for text inputs, not unit selector)
 	if m.FocusIndex >= 0 && m.FocusIndex < len(m.Inputs) {
 		var cmd tea.Cmd
 		m.Inputs[m.FocusIndex], cmd = m.Inputs[m.FocusIndex].Update(msg)
@@ -107,11 +166,6 @@ func (m Model) View() string {
 	}
 }
 
-// renderItemForm renders the item creation form (placeholder for now)
-func (m Model) renderItemForm() string {
-	return "Item form - coming in next stage"
-}
-
 // updateFocus updates which input field is focused
 func (m *Model) updateFocus() {
 	for i := range m.Inputs {
@@ -127,13 +181,21 @@ func (m *Model) updateFocus() {
 func (m *Model) validate() bool {
 	m.Error = ""
 
-	// Name (first field) is always required
-	if len(m.Inputs) > 0 && m.Inputs[0].Value() == "" {
-		m.Error = "Name is required"
+	switch m.FormType {
+	case FormTypeCategory:
+		// Name (first field) is always required
+		if len(m.Inputs) > 0 && m.Inputs[0].Value() == "" {
+			m.Error = "Name is required"
+			return false
+		}
+		return true
+
+	case FormTypeItem:
+		return m.validateItemForm()
+
+	default:
 		return false
 	}
-
-	return true
 }
 
 // GetData returns the form data as a map
@@ -153,7 +215,14 @@ func (m Model) GetData() map[string]interface{} {
 		if len(m.Inputs) >= 1 {
 			data["name"] = m.Inputs[0].Value()
 		}
-		// Quantity and unit type will be added in later stages
+		if len(m.Inputs) >= 2 {
+			// Parse quantity (already validated)
+			quantity, _ := strconv.ParseFloat(m.Inputs[1].Value(), 64)
+			data["quantity"] = quantity
+		}
+		if m.UnitTypeIndex >= 0 && m.UnitTypeIndex < len(m.UnitTypes) {
+			data["unitType"] = m.UnitTypes[m.UnitTypeIndex]
+		}
 	}
 
 	return data
