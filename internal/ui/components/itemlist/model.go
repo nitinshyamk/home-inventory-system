@@ -45,6 +45,20 @@ func (i leafItem) Title() string       { return i.data.Name }
 func (i leafItem) Description() string { return formatQuantity(i.data.Quantity, i.data.UnitType) }
 func (i leafItem) FilterValue() string { return i.data.Name }
 
+// addNewCategoryItem implements list.Item for the "+ Add New Category" entry
+type addNewCategoryItem struct{}
+
+func (i addNewCategoryItem) Title() string       { return "+ Add New Category" }
+func (i addNewCategoryItem) Description() string { return "Create a new category" }
+func (i addNewCategoryItem) FilterValue() string { return "+ Add New Category" }
+
+// addNewItemItem implements list.Item for the "+ Add New Item" entry
+type addNewItemItem struct{}
+
+func (i addNewItemItem) Title() string       { return "+ Add New Item" }
+func (i addNewItemItem) Description() string { return "Create a new item" }
+func (i addNewItemItem) FilterValue() string { return "+ Add New Item" }
+
 // formatQuantity formats a quantity and unit type for display with automatic unit conversions.
 //
 // Conversion rules:
@@ -107,6 +121,7 @@ func (d compactDelegate) Render(w io.Writer, m list.Model, index int, item list.
 
 	title := item.FilterValue()
 	var desc string
+	isAddNew := false
 
 	// Get description based on item type
 	switch i := item.(type) {
@@ -114,6 +129,12 @@ func (d compactDelegate) Render(w io.Writer, m list.Model, index int, item list.
 		desc = i.data.Description
 	case leafItem:
 		desc = i.Description()
+	case addNewCategoryItem:
+		desc = i.Description()
+		isAddNew = true
+	case addNewItemItem:
+		desc = i.Description()
+		isAddNew = true
 	}
 
 	// Truncate/pad title to fixed width
@@ -130,12 +151,24 @@ func (d compactDelegate) Render(w io.Writer, m list.Model, index int, item list.
 
 	if isSelected {
 		indicator = styles.SelectedStyle.Render("│ ")
-		titleStyle = styles.SelectedStyle
-		descStyle = styles.DimStyle.Foreground(lipgloss.Color("205"))
+		if isAddNew {
+			// Use cyan for "+ Add" items when selected
+			titleStyle = styles.SelectedStyle.Foreground(lipgloss.Color("86"))
+			descStyle = styles.DimStyle.Foreground(lipgloss.Color("86"))
+		} else {
+			titleStyle = styles.SelectedStyle
+			descStyle = styles.DimStyle.Foreground(lipgloss.Color("205"))
+		}
 	} else {
 		indicator = styles.DimStyle.Render("  ")
-		titleStyle = styles.NormalStyle
-		descStyle = styles.DimStyle
+		if isAddNew {
+			// Use dim cyan for "+ Add" items when not selected
+			titleStyle = styles.NormalStyle.Foreground(lipgloss.Color("75"))
+			descStyle = styles.DimStyle.Foreground(lipgloss.Color("75"))
+		} else {
+			titleStyle = styles.NormalStyle
+			descStyle = styles.DimStyle
+		}
 	}
 
 	line := indicator + titleStyle.Render(title) + "  " + descStyle.Render(desc)
@@ -195,10 +228,14 @@ func (m *Model) SetTypes(types []domain.ItemType) {
 	m.mode = ModeTypes
 	m.list.Title = "Categories"
 
-	listItems := make([]list.Item, len(types))
+	// Add regular type items
+	listItems := make([]list.Item, len(types)+1)
 	for i, t := range types {
 		listItems[i] = typeItem{data: t}
 	}
+	// Append "+ Add New Category" at the end
+	listItems[len(types)] = addNewCategoryItem{}
+
 	m.list.SetItems(listItems)
 	m.list.ResetSelected()
 }
@@ -209,10 +246,14 @@ func (m *Model) SetLeafItems(items []domain.Item) {
 	m.mode = ModeItems
 	m.list.Title = "Items"
 
-	listItems := make([]list.Item, len(items))
+	// Add regular item entries
+	listItems := make([]list.Item, len(items)+1)
 	for i, item := range items {
 		listItems[i] = leafItem{data: item}
 	}
+	// Append "+ Add New Item" at the end
+	listItems[len(items)] = addNewItemItem{}
+
 	m.list.SetItems(listItems)
 	m.list.ResetSelected()
 }
@@ -264,4 +305,22 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 // View renders the item list
 func (m Model) View() string {
 	return m.list.View()
+}
+
+// SelectedAddNewCategory returns true if the "+ Add New Category" item is selected
+func (m *Model) SelectedAddNewCategory() bool {
+	if m.mode != ModeTypes {
+		return false
+	}
+	_, ok := m.list.SelectedItem().(addNewCategoryItem)
+	return ok
+}
+
+// SelectedAddNewItem returns true if the "+ Add New Item" item is selected
+func (m *Model) SelectedAddNewItem() bool {
+	if m.mode != ModeItems {
+		return false
+	}
+	_, ok := m.list.SelectedItem().(addNewItemItem)
+	return ok
 }
