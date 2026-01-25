@@ -39,49 +39,7 @@ func NewModel(handler *service.Handler) Model {
 
 // Init initializes the application
 func (m Model) Init() tea.Cmd {
-	return m.loadRootTypes
-}
-
-// loadRootTypes fetches root-level types
-func (m Model) loadRootTypes() tea.Msg {
-	result := m.handler.HandleQuery(context.Background(), service.ListRootTypesQuery{})
-	if typesResult, ok := result.(service.ListRootTypesResult); ok {
-		return messages.TypesLoadedMsg{Types: typesResult.Types, ParentID: nil, Err: typesResult.Err}
-	}
-	return messages.ErrorMsg{Err: fmt.Errorf("unexpected query result type")}
-}
-
-// loadChildTypes fetches child types for a parent
-func (m Model) loadChildTypes(parentID int64) tea.Cmd {
-	return func() tea.Msg {
-		result := m.handler.HandleQuery(context.Background(), service.ListChildTypesQuery{ParentID: parentID})
-		if typesResult, ok := result.(service.ListChildTypesResult); ok {
-			return messages.TypesLoadedMsg{Types: typesResult.Types, ParentID: &parentID, Err: typesResult.Err}
-		}
-		return messages.ErrorMsg{Err: fmt.Errorf("unexpected query result type")}
-	}
-}
-
-// loadItemsForType fetches items at a leaf type
-func (m Model) loadItemsForType(typeID int64) tea.Cmd {
-	return func() tea.Msg {
-		result := m.handler.HandleQuery(context.Background(), service.ListItemsByTypeQuery{TypeID: typeID})
-		if itemsResult, ok := result.(service.ListItemsByTypeResult); ok {
-			return messages.LeafItemsLoadedMsg{TypeID: typeID, Items: itemsResult.Items, Err: itemsResult.Err}
-		}
-		return messages.ErrorMsg{Err: fmt.Errorf("unexpected query result type")}
-	}
-}
-
-// loadBreadcrumb fetches the path from root to current type
-func (m Model) loadBreadcrumb(typeID int64) tea.Cmd {
-	return func() tea.Msg {
-		result := m.handler.HandleQuery(context.Background(), service.GetTypePathQuery{TypeID: typeID})
-		if pathResult, ok := result.(service.GetTypePathResult); ok {
-			return messages.BreadcrumbLoadedMsg{Path: pathResult.Path, Err: pathResult.Err}
-		}
-		return messages.ErrorMsg{Err: fmt.Errorf("unexpected query result type")}
-	}
+	return loadRootTypes(m.handler)
 }
 
 // Update handles all messages for the application
@@ -162,7 +120,7 @@ func (m Model) handleTypesLoaded(msg messages.TypesLoadedMsg) (tea.Model, tea.Cm
 
 	// Load breadcrumb if not at root
 	if msg.ParentID != nil {
-		return m, m.loadBreadcrumb(*msg.ParentID)
+		return m, loadBreadcrumb(m.handler, *msg.ParentID)
 	}
 
 	m = clearBreadcrumb(m)
@@ -204,26 +162,26 @@ func (m Model) handleTypeSelected(msg messages.TypeSelectedMsg) (tea.Model, tea.
 		// Load items at this leaf
 		m.currentTypeID = &msg.Type.ID
 		return m, tea.Batch(
-			m.loadItemsForType(msg.Type.ID),
-			m.loadBreadcrumb(msg.Type.ID),
+			loadItemsForType(m.handler, msg.Type.ID),
+			loadBreadcrumb(m.handler, msg.Type.ID),
 		)
 	}
 
 	// Not a leaf, load child types
-	return m, m.loadChildTypes(msg.Type.ID)
+	return m, loadChildTypes(m.handler, msg.Type.ID)
 }
 
 // goToRoot navigates back to the root level
 func (m Model) goToRoot() (tea.Model, tea.Cmd) {
 	m.currentTypeID = nil
 	m = clearBreadcrumb(m)
-	return m, m.loadRootTypes
+	return m, loadRootTypes(m.handler)
 }
 
 // goToParent navigates to a specific parent type
 func (m Model) goToParent(parentID int64) (tea.Model, tea.Cmd) {
 	m.currentTypeID = &parentID
-	return m, m.loadChildTypes(parentID)
+	return m, loadChildTypes(m.handler, parentID)
 }
 
 func (m Model) navigateUp() (tea.Model, tea.Cmd) {

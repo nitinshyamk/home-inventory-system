@@ -31,3 +31,10 @@ type LeafItemsLoadedMsg struct {
 	Items  []domain.Item
 	Err    error
 }
+
+// LeafCheckCompleteMsg is sent when leaf type check completes
+type LeafCheckCompleteMsg struct {
+	TypeID int64
+	IsLeaf bool
+	Err    error
+}
