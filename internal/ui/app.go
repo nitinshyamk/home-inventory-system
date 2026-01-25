@@ -65,11 +65,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.ErrorMsg:
 		return setError(m, msg.Err)
+
+	case messages.FormSubmittedMsg:
+		return handleFormSubmitted(m, msg)
+
+	case messages.FormCancelledMsg:
+		return handleFormCancelled(m)
+
+	case messages.CategoryCreatedMsg:
+		return handleCategoryCreated(m, msg)
+
+	case messages.ItemCreatedMsg:
+		return handleItemCreated(m, msg)
 	}
 
 	// Pass messages to item list when in browsing state
 	if m.state.AllowsItemListDelegation() {
 		return delegateToItemList(m, msg)
+	}
+
+	// Pass messages to form when in creation state
+	if m.state == StateCreatingCategory || m.state == StateCreatingItem {
+		return delegateToForm(m, msg)
 	}
 
 	return m, nil

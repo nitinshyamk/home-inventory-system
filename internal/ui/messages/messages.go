@@ -1,6 +1,9 @@
 package messages
 
-import "home-inventory-system/internal/domain"
+import (
+	"home-inventory-system/internal/domain"
+	"home-inventory-system/internal/ui/components/form"
+)
 
 // ErrorMsg is sent when an error occurs
 type ErrorMsg struct {
@@ -37,4 +40,25 @@ type LeafCheckCompleteMsg struct {
 	TypeID int64
 	IsLeaf bool
 	Err    error
+}
+
+// FormSubmittedMsg is sent when a form is submitted
+type FormSubmittedMsg struct {
+	FormType form.FormType
+	Data     map[string]interface{}
+}
+
+// FormCancelledMsg is sent when a form is cancelled
+type FormCancelledMsg struct{}
+
+// CategoryCreatedMsg is sent when a category is created
+type CategoryCreatedMsg struct {
+	Category *domain.ItemType
+	Err      error
+}
+
+// ItemCreatedMsg is sent when an item is created
+type ItemCreatedMsg struct {
+	Item *domain.Item
+	Err  error
 }
