@@ -97,8 +97,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 // View renders the form
 func (m Model) View() string {
-	// Basic view - will be enhanced in later stages
-	return "Form view placeholder"
+	switch m.FormType {
+	case FormTypeCategory:
+		return m.renderCategoryForm()
+	case FormTypeItem:
+		return m.renderItemForm()
+	default:
+		return "Unknown form type"
+	}
+}
+
+// renderItemForm renders the item creation form (placeholder for now)
+func (m Model) renderItemForm() string {
+	return "Item form - coming in next stage"
 }
 
 // updateFocus updates which input field is focused
