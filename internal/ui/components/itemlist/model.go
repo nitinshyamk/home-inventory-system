@@ -229,12 +229,19 @@ func (m *Model) SetTypes(types []domain.ItemType) {
 	m.list.Title = "Categories"
 
 	// Add regular type items
-	listItems := make([]list.Item, len(types)+1)
-	for i, t := range types {
-		listItems[i] = typeItem{data: t}
+	var listItems []list.Item
+	for _, t := range types {
+		listItems = append(listItems, typeItem{data: t})
 	}
-	// Append "+ Add New Category" at the end
-	listItems[len(types)] = addNewCategoryItem{}
+
+	// Always append "+ Add New Category"
+	listItems = append(listItems, addNewCategoryItem{})
+
+	// If the category list is empty, also add "+ Add New Item" option
+	// This allows users to choose whether to make this an empty category a branch or leaf
+	if len(types) == 0 {
+		listItems = append(listItems, addNewItemItem{})
+	}
 
 	m.list.SetItems(listItems)
 	m.list.ResetSelected()
@@ -318,9 +325,7 @@ func (m *Model) SelectedAddNewCategory() bool {
 
 // SelectedAddNewItem returns true if the "+ Add New Item" item is selected
 func (m *Model) SelectedAddNewItem() bool {
-	if m.mode != ModeItems {
-		return false
-	}
+	// Can be selected in ModeItems, or in ModeTypes when the category list is empty
 	_, ok := m.list.SelectedItem().(addNewItemItem)
 	return ok
 }
