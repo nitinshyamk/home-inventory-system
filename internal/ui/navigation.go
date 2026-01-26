@@ -83,6 +83,11 @@ func selectType(m Model) (Model, tea.Cmd) {
 		return openCategoryCreationForm(m)
 	}
 
+	// Check if "+ Add New Item" is selected (for empty categories)
+	if m.itemList.SelectedAddNewItem() {
+		return openItemCreationForm(m)
+	}
+
 	selected := m.itemList.SelectedType()
 	if selected == nil {
 		return m, nil
