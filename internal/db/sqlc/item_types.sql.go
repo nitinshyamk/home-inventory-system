@@ -270,15 +270,15 @@ func (q *Queries) GetItemTypePath(ctx context.Context, typeID int64) ([]GetItemT
 
 const isLeafItemType = `-- name: IsLeafItemType :one
 SELECT CASE
-    WHEN COUNT(*) = 0 THEN 1
+    WHEN COUNT(*) > 0 THEN 1
     ELSE 0
 END AS is_leaf
-FROM item_types
-WHERE parent_id = ?
+FROM items
+WHERE item_type_id = ?
 `
 
-func (q *Queries) IsLeafItemType(ctx context.Context, parentID sql.NullInt64) (int64, error) {
-	row := q.db.QueryRowContext(ctx, isLeafItemType, parentID)
+func (q *Queries) IsLeafItemType(ctx context.Context, itemTypeID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, isLeafItemType, itemTypeID)
 	var is_leaf int64
 	err := row.Scan(&is_leaf)
 	return is_leaf, err

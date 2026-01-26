@@ -116,9 +116,9 @@ func (r *Repository) GetTypePath(ctx context.Context, typeID int64) ([]domain.It
 	return types, nil
 }
 
-// IsLeafType checks if a type has no children
+// IsLeafType checks if a type contains items (making it a leaf node)
 func (r *Repository) IsLeafType(ctx context.Context, typeID int64) (bool, error) {
-	result, err := r.queries.IsLeafItemType(ctx, sql.NullInt64{Int64: typeID, Valid: true})
+	result, err := r.queries.IsLeafItemType(ctx, typeID)
 	if err != nil {
 		return false, fmt.Errorf("failed to check leaf status: %w", err)
 	}

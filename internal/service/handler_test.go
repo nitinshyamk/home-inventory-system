@@ -143,18 +143,33 @@ func TestHandleIsLeafTypeQuery(t *testing.T) {
 	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
 	pantryResult := handler.HandleCommand(ctx, CreateChildTypeCommand{ParentID: kitchenResult.Type.ID, Name: "Pantry"}).(CreateChildTypeResult)
 
-	// Kitchen should not be a leaf (has child)
+	// Kitchen should not be a leaf (has no items)
 	result := handler.HandleQuery(ctx, IsLeafTypeQuery{TypeID: kitchenResult.Type.ID})
 	leafResult := result.(IsLeafTypeResult)
 	if leafResult.IsLeaf {
-		t.Error("expected Kitchen to not be a leaf")
+		t.Error("expected Kitchen to not be a leaf (no items)")
 	}
 
-	// Pantry should be a leaf (no children)
+	// Pantry should also not be a leaf (no items yet)
+	result = handler.HandleQuery(ctx, IsLeafTypeQuery{TypeID: pantryResult.Type.ID})
+	leafResult = result.(IsLeafTypeResult)
+	if leafResult.IsLeaf {
+		t.Error("expected Pantry to not be a leaf (no items)")
+	}
+
+	// Add an item to Pantry
+	handler.HandleCommand(ctx, CreateItemCommand{
+		Name:     "Rice",
+		TypeID:   pantryResult.Type.ID,
+		Quantity: 5.0,
+		UnitType: "Grams",
+	})
+
+	// Now Pantry should be a leaf (has items)
 	result = handler.HandleQuery(ctx, IsLeafTypeQuery{TypeID: pantryResult.Type.ID})
 	leafResult = result.(IsLeafTypeResult)
 	if !leafResult.IsLeaf {
-		t.Error("expected Pantry to be a leaf")
+		t.Error("expected Pantry to be a leaf (has items)")
 	}
 }
 

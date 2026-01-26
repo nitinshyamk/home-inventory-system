@@ -215,37 +215,52 @@ func TestIsLeafType(t *testing.T) {
 		t.Fatalf("failed to create root: %v", err)
 	}
 
-	// Root should be a leaf initially
+	// Root should NOT be a leaf initially (no items)
 	isLeaf, err := repo.IsLeafType(ctx, root.ID)
 	if err != nil {
 		t.Fatalf("failed to check leaf status: %v", err)
 	}
-	if !isLeaf {
-		t.Error("expected root to be a leaf when it has no children")
+	if isLeaf {
+		t.Error("expected root to not be a leaf when it has no items")
 	}
 
-	// Add a child
+	// Add a child category
 	child, err := repo.CreateChildType(ctx, root.ID, "Pantry", "")
 	if err != nil {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	// Root should no longer be a leaf
+	// Root should still not be a leaf (still no items)
 	isLeaf, err = repo.IsLeafType(ctx, root.ID)
 	if err != nil {
 		t.Fatalf("failed to check leaf status: %v", err)
 	}
 	if isLeaf {
-		t.Error("expected root to not be a leaf when it has children")
+		t.Error("expected root to not be a leaf when it has no items")
 	}
 
-	// Child should be a leaf
+	// Child should also not be a leaf (no items yet)
+	isLeaf, err = repo.IsLeafType(ctx, child.ID)
+	if err != nil {
+		t.Fatalf("failed to check leaf status: %v", err)
+	}
+	if isLeaf {
+		t.Error("expected child to not be a leaf when it has no items")
+	}
+
+	// Add an item to the child
+	_, err = repo.CreateItem(ctx, "Rice", child.ID, 5.0, "Grams")
+	if err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
+
+	// Now child SHOULD be a leaf (has items)
 	isLeaf, err = repo.IsLeafType(ctx, child.ID)
 	if err != nil {
 		t.Fatalf("failed to check leaf status: %v", err)
 	}
 	if !isLeaf {
-		t.Error("expected child to be a leaf")
+		t.Error("expected child to be a leaf when it has items")
 	}
 }
 

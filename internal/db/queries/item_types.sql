@@ -56,11 +56,11 @@ ORDER BY depth ASC;
 
 -- name: IsLeafItemType :one
 SELECT CASE
-    WHEN COUNT(*) = 0 THEN 1
+    WHEN COUNT(*) > 0 THEN 1
     ELSE 0
 END AS is_leaf
-FROM item_types
-WHERE parent_id = ?;
+FROM items
+WHERE item_type_id = ?;
 
 -- name: CountChildItemTypes :one
 SELECT COUNT(*) AS count
