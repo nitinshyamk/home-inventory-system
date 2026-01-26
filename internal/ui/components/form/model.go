@@ -86,10 +86,16 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		case "tab":
 			m.FocusIndex++
-			if m.FormType == FormTypeItem && m.FocusIndex > 2 {
-				m.FocusIndex = 0
-			} else if m.FocusIndex >= len(m.Inputs) {
-				m.FocusIndex = 0
+			// For item forms, cycle through 0, 1, 2 (name, quantity, unit selector)
+			if m.FormType == FormTypeItem {
+				if m.FocusIndex > 2 {
+					m.FocusIndex = 0
+				}
+			} else {
+				// For other forms, cycle through text inputs only
+				if m.FocusIndex >= len(m.Inputs) {
+					m.FocusIndex = 0
+				}
 			}
 			m.updateFocus()
 

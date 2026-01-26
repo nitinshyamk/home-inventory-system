@@ -86,6 +86,7 @@ func (s *Simulator) processUpdate(teaModel tea.Model, cmd tea.Cmd) {
 	if cmd != nil {
 		msg := cmd()
 		if msg != nil {
+			// Recursively process the resulting message
 			s.processUpdate(s.model.Update(msg))
 		}
 	}
