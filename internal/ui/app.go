@@ -84,15 +84,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return delegateToItemList(m, msg)
 	}
 
-	// Pass messages to form when in creation state
-	if m.state == StateCreatingCategory || m.state == StateCreatingItem {
-		return delegateToForm(m, msg)
-	}
-
 	return m, nil
 }
 
 func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// When in form state, delegate all keys to the form (except ctrl+c)
+	if m.state == StateCreatingCategory || m.state == StateCreatingItem {
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+		return delegateToForm(m, msg)
+	}
+
+	// Global key handling for other states
 	switch msg.String() {
 	case "ctrl+c", "q":
 		return m, tea.Quit
