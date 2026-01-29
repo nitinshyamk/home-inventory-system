@@ -6,7 +6,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/service"
 	"home-inventory-system/internal/ui/components/form"
 	"home-inventory-system/internal/ui/messages"
@@ -143,74 +142,6 @@ func delegateToForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	return m, cmd
-}
-
-// handleFormSubmitted processes form submission and initiates category/item creation.
-func handleFormSubmitted(m Model, msg messages.FormSubmittedMsg) (Model, tea.Cmd) {
-	data := msg.Data
-
-	switch m.state {
-	case StateCreatingCategory:
-		name := data["name"].(string)
-		description := data["description"].(string)
-
-		// Create command based on current location
-		cmd := func() tea.Msg {
-			ctx := context.Background()
-
-			if m.currentTypeID == nil {
-				// Creating at root level
-				result := m.handler.HandleCommand(ctx, service.CreateRootTypeCommand{
-					Name:        name,
-					Description: description,
-				})
-				if createResult, ok := result.(service.CreateRootTypeResult); ok {
-					return messages.CategoryCreatedMsg{Category: createResult.Type, Err: createResult.Err}
-				}
-				return messages.CategoryCreatedMsg{Err: fmt.Errorf("unexpected result type")}
-			}
-
-			// Creating as child of current type
-			result := m.handler.HandleCommand(ctx, service.CreateChildTypeCommand{
-				ParentID:    *m.currentTypeID,
-				Name:        name,
-				Description: description,
-			})
-			if createResult, ok := result.(service.CreateChildTypeResult); ok {
-				return messages.CategoryCreatedMsg{Category: createResult.Type, Err: createResult.Err}
-			}
-			return messages.CategoryCreatedMsg{Err: fmt.Errorf("unexpected result type")}
-		}
-		return m, cmd
-
-	case StateCreatingItem:
-		name := data["name"].(string)
-		quantity := data["quantity"].(float64)
-		unitType := data["unitType"].(domain.UnitType)
-
-		// Items can only be created at leaf nodes (when currentTypeID is set)
-		if m.currentTypeID == nil {
-			return setError(m, fmt.Errorf("cannot create items at root level"))
-		}
-
-		cmd := func() tea.Msg {
-			ctx := context.Background()
-			result := m.handler.HandleCommand(ctx, service.CreateItemCommand{
-				Name:     name,
-				TypeID:   *m.currentTypeID,
-				Quantity: quantity,
-				UnitType: unitType,
-			})
-
-			if createResult, ok := result.(service.CreateItemResult); ok {
-				return messages.ItemCreatedMsg{Item: createResult.Item, Err: createResult.Err}
-			}
-			return messages.ItemCreatedMsg{Err: fmt.Errorf("unexpected result type")}
-		}
-		return m, cmd
-	}
-
-	return m, nil
 }
 
 // handleCategoryFormSubmitted processes typed category form submission.

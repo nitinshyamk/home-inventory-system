@@ -204,37 +204,6 @@ func (m *Model) validate() bool {
 	}
 }
 
-// GetData returns the form data as a map
-// Deprecated: Use GetCategoryData() or GetItemData() for type-safe access
-func (m Model) GetData() map[string]interface{} {
-	data := make(map[string]interface{})
-
-	switch m.FormType {
-	case FormTypeCategory:
-		if len(m.Inputs) >= 1 {
-			data["name"] = m.Inputs[0].Value()
-		}
-		if len(m.Inputs) >= 2 {
-			data["description"] = m.Inputs[1].Value()
-		}
-
-	case FormTypeItem:
-		if len(m.Inputs) >= 1 {
-			data["name"] = m.Inputs[0].Value()
-		}
-		if len(m.Inputs) >= 2 {
-			// Parse quantity (already validated)
-			quantity, _ := strconv.ParseFloat(m.Inputs[1].Value(), 64)
-			data["quantity"] = quantity
-		}
-		if m.UnitTypeIndex >= 0 && m.UnitTypeIndex < len(m.UnitTypes) {
-			data["unitType"] = m.UnitTypes[m.UnitTypeIndex]
-		}
-	}
-
-	return data
-}
-
 // CategoryData holds typed data for category forms
 type CategoryData struct {
 	Name        string
