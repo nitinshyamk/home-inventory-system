@@ -7,7 +7,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"home-inventory-system/internal/service"
-	"home-inventory-system/internal/ui/components/form"
 	"home-inventory-system/internal/ui/messages"
 )
 
@@ -131,36 +130,24 @@ func delegateToCategoryForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-// delegateToForm passes messages to the item form component for handling.
-func delegateToForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
+// delegateToItemForm passes messages to the item form component.
+func delegateToItemForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
-	m.form, cmd = m.form.Update(msg)
+	m.itemForm, cmd = m.itemForm.Update(msg)
 
 	// Check if form was submitted or cancelled
-	if m.form.Submitted {
-		// Emit typed messages based on form type
-		switch m.form.FormType {
-		case form.FormTypeCategory:
-			data := m.form.GetCategoryData()
-			return m, func() tea.Msg {
-				return messages.CategoryFormSubmittedMsg{
-					Name:        data.Name,
-					Description: data.Description,
-				}
-			}
-		case form.FormTypeItem:
-			data := m.form.GetItemData()
-			return m, func() tea.Msg {
-				return messages.ItemFormSubmittedMsg{
-					Name:     data.Name,
-					Quantity: data.Quantity,
-					UnitType: data.UnitType,
-				}
+	if m.itemForm.Submitted() {
+		data := m.itemForm.GetData()
+		return m, func() tea.Msg {
+			return messages.ItemFormSubmittedMsg{
+				Name:     data.Name,
+				Quantity: data.Quantity,
+				UnitType: data.UnitType,
 			}
 		}
 	}
 
-	if m.form.Cancelled {
+	if m.itemForm.Cancelled() {
 		return m, func() tea.Msg {
 			return messages.FormCancelledMsg{}
 		}

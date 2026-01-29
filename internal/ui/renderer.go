@@ -126,7 +126,7 @@ func renderFormOverlay(m Model) string {
 	case StateCreatingCategory:
 		formContent = m.categoryForm.View()
 	case StateCreatingItem:
-		formContent = m.form.View()
+		formContent = m.itemForm.View()
 	}
 
 	// Apply border

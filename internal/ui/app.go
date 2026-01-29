@@ -7,6 +7,7 @@ import (
 	"home-inventory-system/internal/service"
 	"home-inventory-system/internal/ui/components/categoryform"
 	"home-inventory-system/internal/ui/components/form"
+	"home-inventory-system/internal/ui/components/itemform"
 	"home-inventory-system/internal/ui/components/itemlist"
 	"home-inventory-system/internal/ui/messages"
 )
@@ -15,8 +16,9 @@ import (
 type Model struct {
 	state         AppState
 	itemList      itemlist.Model
-	form          form.Model          // Legacy form (for items during transition)
-	categoryForm  categoryform.Model  // New category form component
+	form          form.Model          // Legacy form (will be removed)
+	categoryForm  categoryform.Model  // Category form component
+	itemForm      itemform.Model      // Item form component
 	handler       *service.Handler
 	err           error
 	width         int
@@ -104,7 +106,7 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
-		return delegateToForm(m, msg)
+		return delegateToItemForm(m, msg)
 	}
 
 	// Global key handling for other states

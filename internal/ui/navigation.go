@@ -4,7 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"home-inventory-system/internal/ui/components/categoryform"
-	"home-inventory-system/internal/ui/components/form"
+	"home-inventory-system/internal/ui/components/itemform"
 	"home-inventory-system/internal/ui/messages"
 )
 
@@ -136,7 +136,7 @@ func openCategoryCreationForm(m Model) (Model, tea.Cmd) {
 
 // openItemCreationForm opens the item creation form modal.
 func openItemCreationForm(m Model) (Model, tea.Cmd) {
-	m.form = form.NewItemForm(m.width, m.height)
+	m.itemForm = itemform.New(m.width, m.height)
 	m = transitionTo(m, StateCreatingItem)
 	return m, nil
 }
