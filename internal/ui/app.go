@@ -6,7 +6,6 @@ import (
 	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/service"
 	"home-inventory-system/internal/ui/components/categoryform"
-	"home-inventory-system/internal/ui/components/form"
 	"home-inventory-system/internal/ui/components/itemform"
 	"home-inventory-system/internal/ui/components/itemlist"
 	"home-inventory-system/internal/ui/messages"
@@ -16,9 +15,8 @@ import (
 type Model struct {
 	state         AppState
 	itemList      itemlist.Model
-	form          form.Model          // Legacy form (will be removed)
-	categoryForm  categoryform.Model  // Category form component
-	itemForm      itemform.Model      // Item form component
+	categoryForm  categoryform.Model // Category form component
+	itemForm      itemform.Model     // Item form component
 	handler       *service.Handler
 	err           error
 	width         int
