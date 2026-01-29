@@ -71,12 +71,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case messages.ErrorMsg:
 		return setError(m, msg.Err)
 
-	case messages.CategoryFormSubmittedMsg:
-		return handleCategoryFormSubmitted(m, msg)
-
-	case messages.ItemFormSubmittedMsg:
-		return handleItemFormSubmitted(m, msg)
-
 	case messages.FormCancelledMsg:
 		return handleFormCancelled(m)
 
