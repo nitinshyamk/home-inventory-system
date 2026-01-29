@@ -8,31 +8,34 @@ import (
 	"home-inventory-system/internal/ui/components/categoryform"
 	"home-inventory-system/internal/ui/components/itemform"
 	"home-inventory-system/internal/ui/components/itemlist"
+	"home-inventory-system/internal/ui/formcontroller"
 	"home-inventory-system/internal/ui/messages"
 )
 
 // Model is the main application model
 type Model struct {
-	state         AppState
-	itemList      itemlist.Model
-	categoryForm  categoryform.Model // Category form component
-	itemForm      itemform.Model     // Item form component
-	handler       *service.Handler
-	err           error
-	width         int
-	height        int
-	breadcrumb    []domain.ItemType // Current path in hierarchy
-	currentTypeID *int64            // nil = root level
-	items         []domain.Item     // Items at current leaf node
-	selectedItem  *domain.Item
+	state          AppState
+	itemList       itemlist.Model
+	categoryForm   categoryform.Model       // Category form component
+	itemForm       itemform.Model           // Item form component
+	formController *formcontroller.Controller // Form lifecycle manager
+	handler        *service.Handler
+	err            error
+	width          int
+	height         int
+	breadcrumb     []domain.ItemType // Current path in hierarchy
+	currentTypeID  *int64            // nil = root level
+	items          []domain.Item     // Items at current leaf node
+	selectedItem   *domain.Item
 }
 
 // NewModel creates a new application model
 func NewModel(handler *service.Handler) Model {
 	return Model{
-		state:    StateLoading,
-		itemList: itemlist.New(),
-		handler:  handler,
+		state:          StateLoading,
+		itemList:       itemlist.New(),
+		formController: formcontroller.New(handler),
+		handler:        handler,
 	}
 }
 
