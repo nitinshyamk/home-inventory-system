@@ -120,8 +120,14 @@ func renderFormOverlay(m Model) string {
 		Padding(1, 2).
 		Width(formWidth)
 
-	// Render the form
-	formContent := m.form.View()
+	// Render the appropriate form based on state
+	var formContent string
+	switch m.state {
+	case StateCreatingCategory:
+		formContent = m.categoryForm.View()
+	case StateCreatingItem:
+		formContent = m.form.View()
+	}
 
 	// Apply border
 	formModal := borderStyle.Render(formContent)

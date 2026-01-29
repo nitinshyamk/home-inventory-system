@@ -5,6 +5,7 @@ import (
 
 	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/service"
+	"home-inventory-system/internal/ui/components/categoryform"
 	"home-inventory-system/internal/ui/components/form"
 	"home-inventory-system/internal/ui/components/itemlist"
 	"home-inventory-system/internal/ui/messages"
@@ -14,7 +15,8 @@ import (
 type Model struct {
 	state         AppState
 	itemList      itemlist.Model
-	form          form.Model
+	form          form.Model          // Legacy form (for items during transition)
+	categoryForm  categoryform.Model  // New category form component
 	handler       *service.Handler
 	err           error
 	width         int
@@ -92,7 +94,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// When in form state, delegate all keys to the form (except ctrl+c)
-	if m.state == StateCreatingCategory || m.state == StateCreatingItem {
+	if m.state == StateCreatingCategory {
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+		return delegateToCategoryForm(m, msg)
+	}
+	if m.state == StateCreatingItem {
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}

@@ -3,6 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
+	"home-inventory-system/internal/ui/components/categoryform"
 	"home-inventory-system/internal/ui/components/form"
 	"home-inventory-system/internal/ui/messages"
 )
@@ -128,7 +129,7 @@ func goToParent(m Model, parentID int64) (Model, tea.Cmd) {
 
 // openCategoryCreationForm opens the category creation form modal.
 func openCategoryCreationForm(m Model) (Model, tea.Cmd) {
-	m.form = form.NewCategoryForm(m.width, m.height)
+	m.categoryForm = categoryform.New(m.width, m.height)
 	m = transitionTo(m, StateCreatingCategory)
 	return m, nil
 }

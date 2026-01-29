@@ -106,7 +106,32 @@ func delegateToItemList(m Model, msg tea.Msg) (Model, tea.Cmd) {
 	return m, cmd
 }
 
-// delegateToForm passes messages to the form component for handling.
+// delegateToCategoryForm passes messages to the category form component.
+func delegateToCategoryForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.categoryForm, cmd = m.categoryForm.Update(msg)
+
+	// Check if form was submitted or cancelled
+	if m.categoryForm.Submitted() {
+		data := m.categoryForm.GetData()
+		return m, func() tea.Msg {
+			return messages.CategoryFormSubmittedMsg{
+				Name:        data.Name,
+				Description: data.Description,
+			}
+		}
+	}
+
+	if m.categoryForm.Cancelled() {
+		return m, func() tea.Msg {
+			return messages.FormCancelledMsg{}
+		}
+	}
+
+	return m, cmd
+}
+
+// delegateToForm passes messages to the item form component for handling.
 func delegateToForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.form, cmd = m.form.Update(msg)
