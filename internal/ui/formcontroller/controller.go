@@ -53,6 +53,10 @@ func (c *Controller) SubmitCategoryForm(data categoryform.Data, formCtx FormCont
 				Description: data.Description,
 			})
 			if createResult, ok := result.(service.CreateRootTypeResult); ok {
+				// Convert validation error to regular error
+				if createResult.ValidationError != nil {
+					return messages.CategoryCreatedMsg{Err: createResult.ValidationError}
+				}
 				return messages.CategoryCreatedMsg{Category: createResult.Type, Err: createResult.Err}
 			}
 			return messages.CategoryCreatedMsg{Err: fmt.Errorf("unexpected result type")}
@@ -65,6 +69,10 @@ func (c *Controller) SubmitCategoryForm(data categoryform.Data, formCtx FormCont
 			Description: data.Description,
 		})
 		if createResult, ok := result.(service.CreateChildTypeResult); ok {
+			// Convert validation error to regular error
+			if createResult.ValidationError != nil {
+				return messages.CategoryCreatedMsg{Err: createResult.ValidationError}
+			}
 			return messages.CategoryCreatedMsg{Category: createResult.Type, Err: createResult.Err}
 		}
 		return messages.CategoryCreatedMsg{Err: fmt.Errorf("unexpected result type")}
@@ -88,6 +96,10 @@ func (c *Controller) SubmitItemForm(data itemform.Data, formCtx FormContext) tea
 		})
 
 		if createResult, ok := result.(service.CreateItemResult); ok {
+			// Convert validation error to regular error
+			if createResult.ValidationError != nil {
+				return messages.ItemCreatedMsg{Err: createResult.ValidationError}
+			}
 			return messages.ItemCreatedMsg{Item: createResult.Item, Err: createResult.Err}
 		}
 		return messages.ItemCreatedMsg{Err: fmt.Errorf("unexpected result type")}

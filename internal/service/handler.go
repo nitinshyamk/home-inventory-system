@@ -115,16 +115,42 @@ func (h *Handler) handleListLeafTypes(ctx context.Context) ListLeafTypesResult {
 // --- Command Handlers ---
 
 func (h *Handler) handleCreateRootType(ctx context.Context, cmd CreateRootTypeCommand) CreateRootTypeResult {
+	// Validate input
+	if cmd.Name == "" {
+		return CreateRootTypeResult{
+			ValidationError: &ValidationError{Field: "name", Message: "Name is required"},
+		}
+	}
+
 	itemType, err := h.repo.CreateRootType(ctx, cmd.Name, cmd.Description)
 	return CreateRootTypeResult{Type: itemType, Err: err}
 }
 
 func (h *Handler) handleCreateChildType(ctx context.Context, cmd CreateChildTypeCommand) CreateChildTypeResult {
+	// Validate input
+	if cmd.Name == "" {
+		return CreateChildTypeResult{
+			ValidationError: &ValidationError{Field: "name", Message: "Name is required"},
+		}
+	}
+
 	itemType, err := h.repo.CreateChildType(ctx, cmd.ParentID, cmd.Name, cmd.Description)
 	return CreateChildTypeResult{Type: itemType, Err: err}
 }
 
 func (h *Handler) handleCreateItem(ctx context.Context, cmd CreateItemCommand) CreateItemResult {
+	// Validate input
+	if cmd.Name == "" {
+		return CreateItemResult{
+			ValidationError: &ValidationError{Field: "name", Message: "Name is required"},
+		}
+	}
+	if cmd.Quantity <= 0 {
+		return CreateItemResult{
+			ValidationError: &ValidationError{Field: "quantity", Message: "Quantity must be greater than 0"},
+		}
+	}
+
 	item, err := h.repo.CreateItem(ctx, cmd.Name, cmd.TypeID, cmd.Quantity, cmd.UnitType)
 	return CreateItemResult{Item: item, Err: err}
 }

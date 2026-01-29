@@ -2,6 +2,16 @@ package service
 
 import "home-inventory-system/internal/domain"
 
+// ValidationError represents a validation failure
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e ValidationError) Error() string {
+	return e.Message
+}
+
 // Query represents a read-only operation
 type Query interface {
 	isQuery()
@@ -204,24 +214,27 @@ type CommandResult interface {
 
 // CreateRootTypeResult contains the created root type
 type CreateRootTypeResult struct {
-	Type *domain.ItemType
-	Err  error
+	Type            *domain.ItemType
+	ValidationError *ValidationError
+	Err             error
 }
 
 func (CreateRootTypeResult) isCommandResult() {}
 
 // CreateChildTypeResult contains the created child type
 type CreateChildTypeResult struct {
-	Type *domain.ItemType
-	Err  error
+	Type            *domain.ItemType
+	ValidationError *ValidationError
+	Err             error
 }
 
 func (CreateChildTypeResult) isCommandResult() {}
 
 // CreateItemResult contains the created item
 type CreateItemResult struct {
-	Item *domain.Item
-	Err  error
+	Item            *domain.Item
+	ValidationError *ValidationError
+	Err             error
 }
 
 func (CreateItemResult) isCommandResult() {}
