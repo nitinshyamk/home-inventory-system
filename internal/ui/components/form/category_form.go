@@ -46,23 +46,21 @@ func (m Model) renderCategoryForm() string {
 	b.WriteString("\n\n")
 
 	// Name field
-	if m.FocusIndex == 0 {
-		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Name:"))
-	} else {
-		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Name:"))
+	nameField := shared.Field{
+		Label:     "Name",
+		Input:     m.Inputs[0],
+		IsFocused: m.FocusIndex == 0,
 	}
-	b.WriteString("\n  ")
-	b.WriteString(m.Inputs[0].View())
+	b.WriteString(nameField.Render(theme))
 	b.WriteString("\n\n")
 
 	// Description field
-	if m.FocusIndex == 1 {
-		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Description:"))
-	} else {
-		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Description:"))
+	descField := shared.Field{
+		Label:     "Description",
+		Input:     m.Inputs[1],
+		IsFocused: m.FocusIndex == 1,
 	}
-	b.WriteString("\n  ")
-	b.WriteString(m.Inputs[1].View())
+	b.WriteString(descField.Render(theme))
 	b.WriteString("\n\n")
 
 	// Error message

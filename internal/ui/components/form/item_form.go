@@ -55,26 +55,24 @@ func (m Model) renderItemForm() string {
 	b.WriteString("\n\n")
 
 	// Name field
-	if m.FocusIndex == 0 {
-		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Name:"))
-	} else {
-		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Name:"))
+	nameField := shared.Field{
+		Label:     "Name",
+		Input:     m.Inputs[0],
+		IsFocused: m.FocusIndex == 0,
 	}
-	b.WriteString("\n  ")
-	b.WriteString(m.Inputs[0].View())
+	b.WriteString(nameField.Render(theme))
 	b.WriteString("\n\n")
 
 	// Quantity field
-	if m.FocusIndex == 1 {
-		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Quantity:"))
-	} else {
-		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Quantity:"))
+	quantityField := shared.Field{
+		Label:     "Quantity",
+		Input:     m.Inputs[1],
+		IsFocused: m.FocusIndex == 1,
 	}
-	b.WriteString("\n  ")
-	b.WriteString(m.Inputs[1].View())
+	b.WriteString(quantityField.Render(theme))
 	b.WriteString("\n\n")
 
-	// Unit type dropdown
+	// Unit type dropdown (custom rendering - not a text input)
 	if m.FocusIndex == 2 {
 		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Unit Type:"))
 	} else {
