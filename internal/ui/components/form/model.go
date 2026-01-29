@@ -205,6 +205,7 @@ func (m *Model) validate() bool {
 }
 
 // GetData returns the form data as a map
+// Deprecated: Use GetCategoryData() or GetItemData() for type-safe access
 func (m Model) GetData() map[string]interface{} {
 	data := make(map[string]interface{})
 
@@ -231,5 +232,45 @@ func (m Model) GetData() map[string]interface{} {
 		}
 	}
 
+	return data
+}
+
+// CategoryData holds typed data for category forms
+type CategoryData struct {
+	Name        string
+	Description string
+}
+
+// GetCategoryData returns typed category form data
+func (m Model) GetCategoryData() CategoryData {
+	var data CategoryData
+	if len(m.Inputs) >= 1 {
+		data.Name = m.Inputs[0].Value()
+	}
+	if len(m.Inputs) >= 2 {
+		data.Description = m.Inputs[1].Value()
+	}
+	return data
+}
+
+// ItemData holds typed data for item forms
+type ItemData struct {
+	Name     string
+	Quantity float64
+	UnitType domain.UnitType
+}
+
+// GetItemData returns typed item form data
+func (m Model) GetItemData() ItemData {
+	var data ItemData
+	if len(m.Inputs) >= 1 {
+		data.Name = m.Inputs[0].Value()
+	}
+	if len(m.Inputs) >= 2 {
+		data.Quantity, _ = strconv.ParseFloat(m.Inputs[1].Value(), 64)
+	}
+	if m.UnitTypeIndex >= 0 && m.UnitTypeIndex < len(m.UnitTypes) {
+		data.UnitType = m.UnitTypes[m.UnitTypeIndex]
+	}
 	return data
 }

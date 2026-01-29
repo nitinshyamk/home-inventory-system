@@ -8,6 +8,7 @@ import (
 
 	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/service"
+	"home-inventory-system/internal/ui/components/form"
 	"home-inventory-system/internal/ui/messages"
 )
 
@@ -113,11 +114,24 @@ func delegateToForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
 
 	// Check if form was submitted or cancelled
 	if m.form.Submitted {
-		data := m.form.GetData()
-		return m, func() tea.Msg {
-			return messages.FormSubmittedMsg{
-				FormType: m.form.FormType,
-				Data:     data,
+		// Emit typed messages based on form type
+		switch m.form.FormType {
+		case form.FormTypeCategory:
+			data := m.form.GetCategoryData()
+			return m, func() tea.Msg {
+				return messages.CategoryFormSubmittedMsg{
+					Name:        data.Name,
+					Description: data.Description,
+				}
+			}
+		case form.FormTypeItem:
+			data := m.form.GetItemData()
+			return m, func() tea.Msg {
+				return messages.ItemFormSubmittedMsg{
+					Name:     data.Name,
+					Quantity: data.Quantity,
+					UnitType: data.UnitType,
+				}
 			}
 		}
 	}
@@ -197,6 +211,61 @@ func handleFormSubmitted(m Model, msg messages.FormSubmittedMsg) (Model, tea.Cmd
 	}
 
 	return m, nil
+}
+
+// handleCategoryFormSubmitted processes typed category form submission.
+func handleCategoryFormSubmitted(m Model, msg messages.CategoryFormSubmittedMsg) (Model, tea.Cmd) {
+	cmd := func() tea.Msg {
+		ctx := context.Background()
+
+		if m.currentTypeID == nil {
+			// Creating at root level
+			result := m.handler.HandleCommand(ctx, service.CreateRootTypeCommand{
+				Name:        msg.Name,
+				Description: msg.Description,
+			})
+			if createResult, ok := result.(service.CreateRootTypeResult); ok {
+				return messages.CategoryCreatedMsg{Category: createResult.Type, Err: createResult.Err}
+			}
+			return messages.CategoryCreatedMsg{Err: fmt.Errorf("unexpected result type")}
+		}
+
+		// Creating as child of current type
+		result := m.handler.HandleCommand(ctx, service.CreateChildTypeCommand{
+			ParentID:    *m.currentTypeID,
+			Name:        msg.Name,
+			Description: msg.Description,
+		})
+		if createResult, ok := result.(service.CreateChildTypeResult); ok {
+			return messages.CategoryCreatedMsg{Category: createResult.Type, Err: createResult.Err}
+		}
+		return messages.CategoryCreatedMsg{Err: fmt.Errorf("unexpected result type")}
+	}
+	return m, cmd
+}
+
+// handleItemFormSubmitted processes typed item form submission.
+func handleItemFormSubmitted(m Model, msg messages.ItemFormSubmittedMsg) (Model, tea.Cmd) {
+	// Items can only be created at leaf nodes (when currentTypeID is set)
+	if m.currentTypeID == nil {
+		return setError(m, fmt.Errorf("cannot create items at root level"))
+	}
+
+	cmd := func() tea.Msg {
+		ctx := context.Background()
+		result := m.handler.HandleCommand(ctx, service.CreateItemCommand{
+			Name:     msg.Name,
+			TypeID:   *m.currentTypeID,
+			Quantity: msg.Quantity,
+			UnitType: msg.UnitType,
+		})
+
+		if createResult, ok := result.(service.CreateItemResult); ok {
+			return messages.ItemCreatedMsg{Item: createResult.Item, Err: createResult.Err}
+		}
+		return messages.ItemCreatedMsg{Err: fmt.Errorf("unexpected result type")}
+	}
+	return m, cmd
 }
 
 // handleFormCancelled returns to the previous state when form is cancelled.

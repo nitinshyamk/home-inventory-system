@@ -42,10 +42,24 @@ type LeafCheckCompleteMsg struct {
 	Err    error
 }
 
-// FormSubmittedMsg is sent when a form is submitted
+// FormSubmittedMsg is sent when a form is submitted (legacy - will be removed)
+// Deprecated: Use CategoryFormSubmittedMsg or ItemFormSubmittedMsg instead
 type FormSubmittedMsg struct {
 	FormType form.FormType
 	Data     map[string]interface{}
+}
+
+// CategoryFormSubmittedMsg is sent when a category form is submitted
+type CategoryFormSubmittedMsg struct {
+	Name        string
+	Description string
+}
+
+// ItemFormSubmittedMsg is sent when an item form is submitted
+type ItemFormSubmittedMsg struct {
+	Name     string
+	Quantity float64
+	UnitType domain.UnitType
 }
 
 // FormCancelledMsg is sent when a form is cancelled
