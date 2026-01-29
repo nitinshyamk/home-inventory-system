@@ -4,7 +4,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/lipgloss"
+
+	"home-inventory-system/internal/ui/components/shared"
 )
 
 // NewCategoryForm creates a new form for creating categories
@@ -37,23 +38,18 @@ func (m Model) renderCategoryForm() string {
 		return ""
 	}
 
+	theme := shared.DefaultFormTheme()
 	var b strings.Builder
 
 	// Title
-	titleStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("205"))
-	b.WriteString(titleStyle.Render(m.Title))
+	b.WriteString(theme.TitleStyle.Render(m.Title))
 	b.WriteString("\n\n")
 
 	// Name field
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 	if m.FocusIndex == 0 {
-		b.WriteString(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("205")).
-			Render("• Name:"))
+		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Name:"))
 	} else {
-		b.WriteString(labelStyle.Render("  Name:"))
+		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Name:"))
 	}
 	b.WriteString("\n  ")
 	b.WriteString(m.Inputs[0].View())
@@ -61,11 +57,9 @@ func (m Model) renderCategoryForm() string {
 
 	// Description field
 	if m.FocusIndex == 1 {
-		b.WriteString(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("205")).
-			Render("• Description:"))
+		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Description:"))
 	} else {
-		b.WriteString(labelStyle.Render("  Description:"))
+		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Description:"))
 	}
 	b.WriteString("\n  ")
 	b.WriteString(m.Inputs[1].View())
@@ -73,17 +67,12 @@ func (m Model) renderCategoryForm() string {
 
 	// Error message
 	if m.Error != "" {
-		errorStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("196")).
-			Bold(true)
-		b.WriteString(errorStyle.Render("✗ " + m.Error))
+		b.WriteString(theme.ErrorStyle.Render("✗ " + m.Error))
 		b.WriteString("\n\n")
 	}
 
 	// Help text
-	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241"))
-	b.WriteString(helpStyle.Render("Tab: next field • Enter: submit • Esc: cancel"))
+	b.WriteString(theme.HelpStyle.Render("Tab: next field • Enter: submit • Esc: cancel"))
 
 	return b.String()
 }

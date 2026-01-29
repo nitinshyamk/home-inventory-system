@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"home-inventory-system/internal/domain"
+	"home-inventory-system/internal/ui/components/shared"
 )
 
 // NewItemForm creates a new form for creating items
@@ -46,24 +47,18 @@ func (m Model) renderItemForm() string {
 		return ""
 	}
 
+	theme := shared.DefaultFormTheme()
 	var b strings.Builder
 
 	// Title
-	titleStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("205"))
-	b.WriteString(titleStyle.Render(m.Title))
+	b.WriteString(theme.TitleStyle.Render(m.Title))
 	b.WriteString("\n\n")
-
-	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 
 	// Name field
 	if m.FocusIndex == 0 {
-		b.WriteString(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("205")).
-			Render("• Name:"))
+		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Name:"))
 	} else {
-		b.WriteString(labelStyle.Render("  Name:"))
+		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Name:"))
 	}
 	b.WriteString("\n  ")
 	b.WriteString(m.Inputs[0].View())
@@ -71,11 +66,9 @@ func (m Model) renderItemForm() string {
 
 	// Quantity field
 	if m.FocusIndex == 1 {
-		b.WriteString(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("205")).
-			Render("• Quantity:"))
+		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Quantity:"))
 	} else {
-		b.WriteString(labelStyle.Render("  Quantity:"))
+		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Quantity:"))
 	}
 	b.WriteString("\n  ")
 	b.WriteString(m.Inputs[1].View())
@@ -83,11 +76,9 @@ func (m Model) renderItemForm() string {
 
 	// Unit type dropdown
 	if m.FocusIndex == 2 {
-		b.WriteString(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("205")).
-			Render("• Unit Type:"))
+		b.WriteString(theme.FocusedLabelStyle.Render(shared.FocusIndicator + "Unit Type:"))
 	} else {
-		b.WriteString(labelStyle.Render("  Unit Type:"))
+		b.WriteString(theme.LabelStyle.Render(shared.UnfocusedPrefix + "Unit Type:"))
 	}
 	b.WriteString("\n  ")
 	b.WriteString(m.renderUnitTypeSelector())
@@ -95,20 +86,15 @@ func (m Model) renderItemForm() string {
 
 	// Error message
 	if m.Error != "" {
-		errorStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("196")).
-			Bold(true)
-		b.WriteString(errorStyle.Render("✗ " + m.Error))
+		b.WriteString(theme.ErrorStyle.Render("✗ " + m.Error))
 		b.WriteString("\n\n")
 	}
 
 	// Help text
-	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241"))
 	if m.FocusIndex == 2 {
-		b.WriteString(helpStyle.Render("↑/↓: select unit • Enter: submit • Esc: cancel"))
+		b.WriteString(theme.HelpStyle.Render("↑/↓: select unit • Enter: submit • Esc: cancel"))
 	} else {
-		b.WriteString(helpStyle.Render("Tab: next field • Enter: next/submit • Esc: cancel"))
+		b.WriteString(theme.HelpStyle.Render("Tab: next field • Enter: next/submit • Esc: cancel"))
 	}
 
 	return b.String()
@@ -118,6 +104,7 @@ func (m Model) renderItemForm() string {
 func (m Model) renderUnitTypeSelector() string {
 	var b strings.Builder
 
+	// Use same color scheme as theme for consistency
 	selectedStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("205")).
 		Bold(true)
