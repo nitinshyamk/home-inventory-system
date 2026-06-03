@@ -432,3 +432,18 @@ func (q *Queries) ListRootItemTypes(ctx context.Context) ([]ItemType, error) {
 	}
 	return items, nil
 }
+
+const updateItemType = `-- name: UpdateItemType :exec
+UPDATE item_types SET name = ?, description = ? WHERE id = ?
+`
+
+type UpdateItemTypeParams struct {
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	ID          int64          `json:"id"`
+}
+
+func (q *Queries) UpdateItemType(ctx context.Context, arg UpdateItemTypeParams) error {
+	_, err := q.db.ExecContext(ctx, updateItemType, arg.Name, arg.Description, arg.ID)
+	return err
+}

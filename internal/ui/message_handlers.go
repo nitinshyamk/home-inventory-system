@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"home-inventory-system/internal/service"
 	"home-inventory-system/internal/ui/formcontroller"
 	"home-inventory-system/internal/ui/messages"
 )
@@ -194,6 +196,53 @@ func handleFormCancelled(m Model) (Model, tea.Cmd) {
 		m = transitionTo(m, StateViewingItems)
 	}
 	return m, nil
+}
+
+// delegateToCategoryEditForm passes key events to the category edit form in the right pane.
+func delegateToCategoryEditForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.categoryEditForm, cmd = m.categoryEditForm.Update(msg)
+
+	if m.categoryEditForm.Submitted() {
+		return m, submitCategoryEdit(m.handler, m.rightPane.category.ID, m.categoryEditForm.Name(), m.categoryEditForm.Description())
+	}
+	if m.categoryEditForm.Cancelled() {
+		m = transitionTo(m, StateBrowsingTypes)
+	}
+	return m, cmd
+}
+
+// submitCategoryEdit sends an UpdateCategoryCommand and emits CategoryUpdatedMsg.
+func submitCategoryEdit(handler *service.Handler, id int64, name, description string) tea.Cmd {
+	return func() tea.Msg {
+		result, ok := handler.HandleCommand(context.Background(), service.UpdateCategoryCommand{
+			ID:          id,
+			Name:        name,
+			Description: description,
+		}).(service.UpdateCategoryResult)
+		if !ok {
+			return messages.CategoryUpdatedMsg{Err: fmt.Errorf("unexpected result type")}
+		}
+		if result.ValidationError != nil {
+			return messages.CategoryUpdatedMsg{Err: result.ValidationError}
+		}
+		return messages.CategoryUpdatedMsg{Category: result.Type, Err: result.Err}
+	}
+}
+
+// handleCategoryUpdated processes the result of a category update.
+func handleCategoryUpdated(m Model, msg messages.CategoryUpdatedMsg) (Model, tea.Cmd) {
+	if msg.Err != nil {
+		// Show the error inline in the form (non-fatal)
+		m.categoryEditForm.SetError(msg.Err.Error())
+		return m, nil
+	}
+	// Return to browsing and refresh the list
+	m = transitionTo(m, StateBrowsingTypes)
+	if m.currentTypeID == nil {
+		return m, loadRootTypes(m.handler)
+	}
+	return m, loadChildTypes(m.handler, *m.currentTypeID)
 }
 
 // handleRightPaneDetail updates the right pane with loaded category count data.

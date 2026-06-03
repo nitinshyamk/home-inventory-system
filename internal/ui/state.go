@@ -11,6 +11,7 @@ const (
 	StateViewingItems              // Viewing items at a leaf node
 	StateCreatingCategory          // Creating a new category via form
 	StateCreatingItem              // Creating a new item via form
+	StateEditingCategory           // Editing an existing category via right-pane form
 	StateError
 )
 
@@ -27,6 +28,8 @@ func (s AppState) String() string {
 		return "CreatingCategory"
 	case StateCreatingItem:
 		return "CreatingItem"
+	case StateEditingCategory:
+		return "EditingCategory"
 	case StateError:
 		return "Error"
 	default:

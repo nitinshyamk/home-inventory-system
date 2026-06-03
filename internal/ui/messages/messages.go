@@ -54,6 +54,12 @@ type ItemCreatedMsg struct {
 	Err  error
 }
 
+// CategoryUpdatedMsg is sent when a category is successfully updated
+type CategoryUpdatedMsg struct {
+	Category *domain.ItemType
+	Err      error
+}
+
 // RightPaneDetailMsg carries loaded count data for the right pane category detail.
 type RightPaneDetailMsg struct {
 	CategoryID int64

@@ -5,6 +5,7 @@ import (
 
 	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/service"
+	"home-inventory-system/internal/ui/components/categoryedit"
 	"home-inventory-system/internal/ui/components/categoryform"
 	"home-inventory-system/internal/ui/components/itemform"
 	"home-inventory-system/internal/ui/components/itemlist"
@@ -27,19 +28,20 @@ type rightPaneContent struct {
 
 // Model is the main application model
 type Model struct {
-	state          AppState
-	itemList       itemlist.Model
-	categoryForm   categoryform.Model
-	itemForm       itemform.Model
-	formController *formcontroller.Controller
-	handler        *service.Handler
-	err            error
-	width          int
-	height         int
-	breadcrumb     []domain.ItemType // Current path in hierarchy
-	currentTypeID  *int64            // nil = root level
-	items          []domain.Item     // Items at current leaf node
-	rightPane      rightPaneContent  // Cached detail for the right pane
+	state            AppState
+	itemList         itemlist.Model
+	categoryForm     categoryform.Model
+	categoryEditForm categoryedit.Model
+	itemForm         itemform.Model
+	formController   *formcontroller.Controller
+	handler          *service.Handler
+	err              error
+	width            int
+	height           int
+	breadcrumb       []domain.ItemType // Current path in hierarchy
+	currentTypeID    *int64            // nil = root level
+	items            []domain.Item     // Items at current leaf node
+	rightPane        rightPaneContent  // Cached detail for the right pane
 }
 
 // NewModel creates a new application model
@@ -95,6 +97,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.RightPaneDetailMsg:
 		return handleRightPaneDetail(m, msg)
+
+	case messages.CategoryUpdatedMsg:
+		return handleCategoryUpdated(m, msg)
 	}
 
 	// Pass messages to item list when in browsing state
@@ -106,7 +111,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// When in form state, delegate all keys to the form (except ctrl+c)
+	// When in right-pane edit state, delegate all keys to the edit form (except ctrl+c)
+	if m.state == StateEditingCategory {
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+		return delegateToCategoryEditForm(m, msg)
+	}
+
+	// When in modal form state, delegate all keys to the form (except ctrl+c)
 	if m.state == StateCreatingCategory {
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
@@ -130,6 +143,9 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "enter", "ctrl+f", "right":
 		return selectCurrent(m)
+
+	case "e":
+		return openEditForm(m)
 	}
 
 	// Pass to itemlist for navigation; also refreshes right pane detail

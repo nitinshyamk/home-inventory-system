@@ -191,6 +191,15 @@ type CreateItemCommand struct {
 
 func (CreateItemCommand) isCommand() {}
 
+// UpdateCategoryCommand updates an existing item type's name and description
+type UpdateCategoryCommand struct {
+	ID          int64
+	Name        string
+	Description string
+}
+
+func (UpdateCategoryCommand) isCommand() {}
+
 // DeleteItemCommand deletes an item
 type DeleteItemCommand struct {
 	ID int64
@@ -238,6 +247,15 @@ type CreateItemResult struct {
 }
 
 func (CreateItemResult) isCommandResult() {}
+
+// UpdateCategoryResult contains the updated item type
+type UpdateCategoryResult struct {
+	Type            *domain.ItemType
+	ValidationError *ValidationError
+	Err             error
+}
+
+func (UpdateCategoryResult) isCommandResult() {}
 
 // DeleteItemResult contains the delete operation result
 type DeleteItemResult struct {

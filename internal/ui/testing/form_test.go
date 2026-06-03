@@ -251,6 +251,87 @@ func TestFormNavigationWithTab(t *testing.T) {
 	sim.AssertCategoryExists(t, "Kitchen", "Description")
 }
 
+func TestEditCategory_SaveChanges(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{
+		Name:        "Kitchen",
+		Description: "Old",
+	})
+	sim.Reload()
+
+	// Press 'e' to open edit form
+	sim.SendKeys(Type("e"))
+	sim.AssertState(t, ui.StateEditingCategory)
+
+	// Append to name to make a change, then Tab to Save and submit
+	sim.SendKeys(Type(" Updated")) // Name is now "Kitchen Updated"
+	sim.SendKeys(KeyTab, KeyTab)   // Tab past Description to Save
+	sim.SendKeys(KeyEnter)         // submit
+
+	sim.AssertState(t, ui.StateBrowsingTypes)
+	sim.AssertListContains(t, "Kitchen Updated")
+	sim.AssertNoError(t)
+}
+
+func TestEditCategory_Cancel(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Kitchen"})
+	sim.Reload()
+
+	sim.SendKeys(Type("e"))
+	sim.AssertState(t, ui.StateEditingCategory)
+
+	sim.SendKeys(KeyEsc)
+	sim.AssertState(t, ui.StateBrowsingTypes)
+	sim.AssertListContains(t, "Kitchen")
+	sim.AssertNoError(t)
+}
+
+func TestEditCategory_ValidationEmptyName(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Kit"})
+	sim.Reload()
+
+	sim.SendKeys(Type("e"))
+	sim.AssertState(t, ui.StateEditingCategory)
+
+	// Clear name field ("Kit" = 3 chars, cursor is at end after SetValue)
+	sim.SendKeys(KeyBackspace, KeyBackspace, KeyBackspace)
+	// Tab to Save and try to submit with empty name
+	sim.SendKeys(KeyTab, KeyTab, KeyEnter)
+
+	// Still in edit state because submit() sets error without transitioning
+	sim.AssertState(t, ui.StateEditingCategory)
+	sim.AssertNoError(t) // app-level error should not be set
+}
+
+func TestEditCategory_DisabledSaveWhenUnchanged(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Kitchen"})
+	sim.Reload()
+
+	sim.SendKeys(Type("e"))
+	sim.AssertState(t, ui.StateEditingCategory)
+
+	// Tab straight to Save without changing anything
+	sim.SendKeys(KeyTab, KeyTab, KeyEnter)
+
+	// Save is disabled when no changes — should still be in edit state
+	sim.AssertState(t, ui.StateEditingCategory)
+}
+
 func TestItemFormUnitTypeSelection(t *testing.T) {
 	sim := NewSimulator(t)
 	defer sim.Cleanup()

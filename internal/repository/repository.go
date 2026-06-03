@@ -227,6 +227,19 @@ func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64, 
 	return &item, nil
 }
 
+// UpdateItemType updates the name and description of an item type
+func (r *Repository) UpdateItemType(ctx context.Context, id int64, name, description string) error {
+	err := r.queries.UpdateItemType(ctx, sqlc.UpdateItemTypeParams{
+		ID:          id,
+		Name:        name,
+		Description: toNullString(description),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update item type: %w", err)
+	}
+	return nil
+}
+
 // DeleteItem deletes an item by ID
 func (r *Repository) DeleteItem(ctx context.Context, id int64) error {
 	err := r.queries.DeleteItem(ctx, id)

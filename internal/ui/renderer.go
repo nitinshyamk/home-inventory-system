@@ -22,7 +22,7 @@ func renderView(m Model) string {
 	switch m.state {
 	case StateLoading:
 		return renderLoading()
-	case StateBrowsingTypes, StateViewingItems:
+	case StateBrowsingTypes, StateViewingItems, StateEditingCategory:
 		return renderMainView(m)
 	case StateCreatingCategory, StateCreatingItem:
 		return renderFormOverlay(m)
@@ -69,7 +69,7 @@ func renderSplitView(m Model) string {
 	}
 	sep := strings.Join(sepLines, "\n")
 
-	rightPane := lipgloss.NewStyle().Width(rightWidth).Height(paneHeight).Render(renderRightPane(m.rightPane))
+	rightPane := lipgloss.NewStyle().Width(rightWidth).Height(paneHeight).Render(renderRightPaneForModel(m))
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, sep, rightPane)
 
@@ -79,6 +79,14 @@ func renderSplitView(m Model) string {
 	b.WriteString(body)
 	b.WriteString(renderHelp(m.state))
 	return b.String()
+}
+
+// renderRightPaneForModel renders the right pane accounting for edit states.
+func renderRightPaneForModel(m Model) string {
+	if m.state == StateEditingCategory {
+		return m.categoryEditForm.View()
+	}
+	return renderRightPane(m.rightPane)
 }
 
 // renderRightPane renders the right pane content from cached detail data.

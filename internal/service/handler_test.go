@@ -262,6 +262,69 @@ func TestHandleListLeafTypesQuery(t *testing.T) {
 	}
 }
 
+func TestHandleUpdateCategoryCommand_Success(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	createResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+	if createResult.Err != nil {
+		t.Fatalf("failed to create category: %v", createResult.Err)
+	}
+
+	result := handler.HandleCommand(ctx, UpdateCategoryCommand{
+		ID:          createResult.Type.ID,
+		Name:        "Kitchen Updated",
+		Description: "New desc",
+	}).(UpdateCategoryResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if result.Type == nil {
+		t.Fatal("expected updated type to be returned")
+	}
+	if result.Type.Name != "Kitchen Updated" {
+		t.Errorf("expected name 'Kitchen Updated', got '%s'", result.Type.Name)
+	}
+}
+
+func TestHandleUpdateCategoryCommand_EmptyName(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	createResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+
+	result := handler.HandleCommand(ctx, UpdateCategoryCommand{
+		ID:   createResult.Type.ID,
+		Name: "",
+	}).(UpdateCategoryResult)
+
+	if result.ValidationError == nil {
+		t.Error("expected validation error for empty name")
+	}
+}
+
+func TestHandleUpdateCategoryCommand_DuplicateName(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Garage"})
+	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+
+	// Try to rename Kitchen to Garage (duplicate root name)
+	result := handler.HandleCommand(ctx, UpdateCategoryCommand{
+		ID:   kitchenResult.Type.ID,
+		Name: "Garage",
+	}).(UpdateCategoryResult)
+
+	if result.Err == nil {
+		t.Error("expected error for duplicate name")
+	}
+}
+
 func TestSeedIntegration(t *testing.T) {
 	handler, cleanup := setupTestHandler(t)
 	defer cleanup()

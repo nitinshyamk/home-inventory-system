@@ -3,6 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
+	"home-inventory-system/internal/ui/components/categoryedit"
 	"home-inventory-system/internal/ui/formcontroller"
 	"home-inventory-system/internal/ui/messages"
 )
@@ -108,6 +109,22 @@ func goToRoot(m Model) (Model, tea.Cmd) {
 func goToParent(m Model, parentID int64) (Model, tea.Cmd) {
 	m.currentTypeID = &parentID
 	return m, loadChildTypes(m.handler, parentID)
+}
+
+// openEditForm opens the appropriate right-pane edit form for the highlighted item/category.
+func openEditForm(m Model) (Model, tea.Cmd) {
+	if m.rightPane.category != nil && m.state == StateBrowsingTypes {
+		return openCategoryEditForm(m)
+	}
+	return m, nil
+}
+
+// openCategoryEditForm opens the category edit form in the right pane.
+func openCategoryEditForm(m Model) (Model, tea.Cmd) {
+	cat := m.rightPane.category
+	m.categoryEditForm = categoryedit.New(cat.Name, cat.Description)
+	m = transitionTo(m, StateEditingCategory)
+	return m, nil
 }
 
 // openCategoryCreationForm opens the category creation form modal.

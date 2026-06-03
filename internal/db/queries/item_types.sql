@@ -92,3 +92,6 @@ WITH RECURSIVE descendants AS (
 )
 SELECT * FROM descendants
 ORDER BY depth, name;
+
+-- name: UpdateItemType :exec
+UPDATE item_types SET name = ?, description = ? WHERE id = ?;
