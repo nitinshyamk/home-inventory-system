@@ -54,6 +54,12 @@ type ItemCreatedMsg struct {
 	Err  error
 }
 
+// ItemUpdatedMsg is sent when an item is successfully updated
+type ItemUpdatedMsg struct {
+	Item *domain.Item
+	Err  error
+}
+
 // CategoryUpdatedMsg is sent when a category is successfully updated
 type CategoryUpdatedMsg struct {
 	Category *domain.ItemType

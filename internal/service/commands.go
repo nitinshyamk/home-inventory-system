@@ -191,6 +191,26 @@ type CreateItemCommand struct {
 
 func (CreateItemCommand) isCommand() {}
 
+// UpdateItemCommand updates an existing item's fields
+type UpdateItemCommand struct {
+	ID       int64
+	Name     string
+	TypeID   int64
+	Quantity float64
+	UnitType domain.UnitType
+}
+
+func (UpdateItemCommand) isCommand() {}
+
+// UpdateItemResult contains the updated item
+type UpdateItemResult struct {
+	Item            *domain.Item
+	ValidationError *ValidationError
+	Err             error
+}
+
+func (UpdateItemResult) isCommandResult() {}
+
 // UpdateCategoryCommand updates an existing item type's name and description
 type UpdateCategoryCommand struct {
 	ID          int64

@@ -227,6 +227,21 @@ func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64, 
 	return &item, nil
 }
 
+// UpdateItem updates an existing item's name, type, quantity, and unit type.
+func (r *Repository) UpdateItem(ctx context.Context, id int64, name string, typeID int64, quantity float64, unitType domain.UnitType) error {
+	err := r.queries.UpdateItem(ctx, sqlc.UpdateItemParams{
+		ID:         id,
+		Name:       name,
+		ItemTypeID: typeID,
+		Quantity:   quantity,
+		UnitType:   unitType.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update item: %w", err)
+	}
+	return nil
+}
+
 // UpdateItemType updates the name and description of an item type
 func (r *Repository) UpdateItemType(ctx context.Context, id int64, name, description string) error {
 	err := r.queries.UpdateItemType(ctx, sqlc.UpdateItemTypeParams{

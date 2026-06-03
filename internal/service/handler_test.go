@@ -262,6 +262,70 @@ func TestHandleListLeafTypesQuery(t *testing.T) {
 	}
 }
 
+func TestHandleUpdateItemCommand_Success(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	catResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+	itemResult := handler.HandleCommand(ctx, CreateItemCommand{
+		Name: "Spoon", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount,
+	}).(CreateItemResult)
+
+	result := handler.HandleCommand(ctx, UpdateItemCommand{
+		ID: itemResult.Item.ID, Name: "Big Spoon", TypeID: catResult.Type.ID,
+		Quantity: 5.0, UnitType: domain.UnitTypeGrams,
+	}).(UpdateItemResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if result.Item.Name != "Big Spoon" {
+		t.Errorf("expected name 'Big Spoon', got '%s'", result.Item.Name)
+	}
+	if result.Item.Quantity != 5.0 {
+		t.Errorf("expected quantity 5.0, got %f", result.Item.Quantity)
+	}
+}
+
+func TestHandleUpdateItemCommand_EmptyName(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	catResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+	itemResult := handler.HandleCommand(ctx, CreateItemCommand{
+		Name: "Spoon", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount,
+	}).(CreateItemResult)
+
+	result := handler.HandleCommand(ctx, UpdateItemCommand{
+		ID: itemResult.Item.ID, Name: "", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount,
+	}).(UpdateItemResult)
+
+	if result.ValidationError == nil {
+		t.Error("expected validation error for empty name")
+	}
+}
+
+func TestHandleUpdateItemCommand_InvalidQuantity(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	catResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+	itemResult := handler.HandleCommand(ctx, CreateItemCommand{
+		Name: "Spoon", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount,
+	}).(CreateItemResult)
+
+	result := handler.HandleCommand(ctx, UpdateItemCommand{
+		ID: itemResult.Item.ID, Name: "Spoon", TypeID: catResult.Type.ID, Quantity: -1.0, UnitType: domain.UnitTypeCount,
+	}).(UpdateItemResult)
+
+	if result.ValidationError == nil {
+		t.Error("expected validation error for negative quantity")
+	}
+}
+
 func TestHandleUpdateCategoryCommand_Success(t *testing.T) {
 	handler, cleanup := setupTestHandler(t)
 	defer cleanup()

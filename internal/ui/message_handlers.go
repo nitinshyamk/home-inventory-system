@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"home-inventory-system/internal/service"
+	"home-inventory-system/internal/ui/components/itemedit"
 	"home-inventory-system/internal/ui/formcontroller"
 	"home-inventory-system/internal/ui/messages"
 )
@@ -243,6 +244,53 @@ func handleCategoryUpdated(m Model, msg messages.CategoryUpdatedMsg) (Model, tea
 		return m, loadRootTypes(m.handler)
 	}
 	return m, loadChildTypes(m.handler, *m.currentTypeID)
+}
+
+// delegateToItemEditForm passes key events to the item edit form in the right pane.
+func delegateToItemEditForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.itemEditForm, cmd = m.itemEditForm.Update(msg)
+
+	if m.itemEditForm.Submitted() {
+		return m, submitItemEdit(m.handler, m.rightPane.item.ID, m.itemEditForm)
+	}
+	if m.itemEditForm.Cancelled() {
+		m = transitionTo(m, StateViewingItems)
+	}
+	return m, cmd
+}
+
+// submitItemEdit sends an UpdateItemCommand and emits ItemUpdatedMsg.
+func submitItemEdit(handler *service.Handler, id int64, form itemedit.Model) tea.Cmd {
+	return func() tea.Msg {
+		result, ok := handler.HandleCommand(context.Background(), service.UpdateItemCommand{
+			ID:       id,
+			Name:     form.Name(),
+			TypeID:   form.TypeID(),
+			Quantity: form.Quantity(),
+			UnitType: form.UnitType(),
+		}).(service.UpdateItemResult)
+		if !ok {
+			return messages.ItemUpdatedMsg{Err: fmt.Errorf("unexpected result type")}
+		}
+		if result.ValidationError != nil {
+			return messages.ItemUpdatedMsg{Err: result.ValidationError}
+		}
+		return messages.ItemUpdatedMsg{Item: result.Item, Err: result.Err}
+	}
+}
+
+// handleItemUpdated processes the result of an item update.
+func handleItemUpdated(m Model, msg messages.ItemUpdatedMsg) (Model, tea.Cmd) {
+	if msg.Err != nil {
+		m.itemEditForm.SetError(msg.Err.Error())
+		return m, nil
+	}
+	m = transitionTo(m, StateViewingItems)
+	if m.currentTypeID == nil {
+		return m, nil
+	}
+	return m, loadItemsForType(m.handler, *m.currentTypeID)
 }
 
 // handleRightPaneDetail updates the right pane with loaded category count data.

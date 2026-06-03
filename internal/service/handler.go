@@ -56,6 +56,8 @@ func (h *Handler) HandleCommand(ctx context.Context, c Command) CommandResult {
 		return h.handleCreateChildType(ctx, cmd)
 	case CreateItemCommand:
 		return h.handleCreateItem(ctx, cmd)
+	case UpdateItemCommand:
+		return h.handleUpdateItem(ctx, cmd)
 	case UpdateCategoryCommand:
 		return h.handleUpdateCategory(ctx, cmd)
 	case DeleteItemCommand:
@@ -155,6 +157,24 @@ func (h *Handler) handleCreateItem(ctx context.Context, cmd CreateItemCommand) C
 
 	item, err := h.repo.CreateItem(ctx, cmd.Name, cmd.TypeID, cmd.Quantity, cmd.UnitType)
 	return CreateItemResult{Item: item, Err: err}
+}
+
+func (h *Handler) handleUpdateItem(ctx context.Context, cmd UpdateItemCommand) UpdateItemResult {
+	if cmd.Name == "" {
+		return UpdateItemResult{
+			ValidationError: &ValidationError{Field: "name", Message: "Name is required"},
+		}
+	}
+	if cmd.Quantity <= 0 {
+		return UpdateItemResult{
+			ValidationError: &ValidationError{Field: "quantity", Message: "Quantity must be greater than 0"},
+		}
+	}
+	if err := h.repo.UpdateItem(ctx, cmd.ID, cmd.Name, cmd.TypeID, cmd.Quantity, cmd.UnitType); err != nil {
+		return UpdateItemResult{Err: err}
+	}
+	updated, err := h.repo.GetItem(ctx, cmd.ID)
+	return UpdateItemResult{Item: updated, Err: err}
 }
 
 func (h *Handler) handleUpdateCategory(ctx context.Context, cmd UpdateCategoryCommand) UpdateCategoryResult {

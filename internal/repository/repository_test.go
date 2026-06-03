@@ -456,6 +456,33 @@ func TestListItemsByType(t *testing.T) {
 	}
 }
 
+func TestUpdateItem(t *testing.T) {
+	repo, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
+	item, err := repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, domain.UnitTypeCount)
+	if err != nil {
+		t.Fatalf("failed to create item: %v", err)
+	}
+
+	if err := repo.UpdateItem(ctx, item.ID, "Large Spoon", kitchen.ID, 3.0, domain.UnitTypeCount); err != nil {
+		t.Fatalf("failed to update item: %v", err)
+	}
+
+	updated, err := repo.GetItem(ctx, item.ID)
+	if err != nil {
+		t.Fatalf("failed to get updated item: %v", err)
+	}
+	if updated.Name != "Large Spoon" {
+		t.Errorf("expected name 'Large Spoon', got '%s'", updated.Name)
+	}
+	if updated.Quantity != 3.0 {
+		t.Errorf("expected quantity 3.0, got %f", updated.Quantity)
+	}
+}
+
 func TestUpdateItemType(t *testing.T) {
 	repo, cleanup := setupTestDB(t)
 	defer cleanup()

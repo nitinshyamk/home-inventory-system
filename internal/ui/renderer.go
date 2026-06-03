@@ -22,7 +22,7 @@ func renderView(m Model) string {
 	switch m.state {
 	case StateLoading:
 		return renderLoading()
-	case StateBrowsingTypes, StateViewingItems, StateEditingCategory:
+	case StateBrowsingTypes, StateViewingItems, StateEditingCategory, StateEditingItem:
 		return renderMainView(m)
 	case StateCreatingCategory, StateCreatingItem:
 		return renderFormOverlay(m)
@@ -83,8 +83,11 @@ func renderSplitView(m Model) string {
 
 // renderRightPaneForModel renders the right pane accounting for edit states.
 func renderRightPaneForModel(m Model) string {
-	if m.state == StateEditingCategory {
+	switch m.state {
+	case StateEditingCategory:
 		return m.categoryEditForm.View()
+	case StateEditingItem:
+		return m.itemEditForm.View()
 	}
 	return renderRightPane(m.rightPane)
 }

@@ -251,6 +251,103 @@ func TestFormNavigationWithTab(t *testing.T) {
 	sim.AssertCategoryExists(t, "Kitchen", "Description")
 }
 
+func TestEditItem_SaveChanges(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	catResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Rice", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	// Navigate into Pantry (first item is Pantry category)
+	sim.SendKeys(KeyEnter)
+
+	// Now in items view, press 'e' to edit
+	sim.SendKeys(Type("e"))
+	sim.AssertState(t, ui.StateEditingItem)
+
+	// Append to name
+	sim.SendKeys(Type(" Bag"))  // "Rice Bag"
+	sim.SendKeys(KeyTab, KeyTab, KeyTab) // Tab past Qty, Unit to Save
+	sim.SendKeys(KeyEnter)
+
+	sim.AssertState(t, ui.StateViewingItems)
+	sim.AssertListContains(t, "Rice Bag")
+	sim.AssertNoError(t)
+}
+
+func TestEditItem_Cancel(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	catResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Rice", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	sim.SendKeys(KeyEnter) // navigate into Pantry
+	sim.SendKeys(Type("e"))
+	sim.AssertState(t, ui.StateEditingItem)
+
+	sim.SendKeys(KeyEsc)
+	sim.AssertState(t, ui.StateViewingItems)
+	sim.AssertListContains(t, "Rice")
+	sim.AssertNoError(t)
+}
+
+func TestEditItem_UnitTypeSelection(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	catResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Milk", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	sim.SendKeys(KeyEnter) // into Pantry
+	sim.SendKeys(Type("e"))
+
+	// Tab to Unit selector and cycle to "Liters"
+	sim.SendKeys(KeyTab, KeyTab) // past Name, Qty to Unit
+	sim.SendKeys(KeyDown, KeyDown) // Count → Grams → Liters
+	// Tab to Save and submit
+	sim.SendKeys(KeyTab, KeyEnter)
+
+	sim.AssertState(t, ui.StateViewingItems)
+	items := sim.handler.HandleQuery(ctx, service.ListItemsByTypeQuery{TypeID: catResult.Type.ID}).(service.ListItemsByTypeResult)
+	if len(items.Items) != 1 || items.Items[0].UnitType != "Liters" {
+		t.Errorf("expected item with unit Liters, got %+v", items.Items)
+	}
+}
+
+func TestEditItem_DisabledSaveWhenUnchanged(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	catResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Rice", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	sim.SendKeys(KeyEnter)
+	sim.SendKeys(Type("e"))
+	sim.AssertState(t, ui.StateEditingItem)
+
+	// Tab to Save without any changes
+	sim.SendKeys(KeyTab, KeyTab, KeyTab, KeyEnter)
+	// Save is disabled when unchanged
+	sim.AssertState(t, ui.StateEditingItem)
+}
+
 func TestEditCategory_SaveChanges(t *testing.T) {
 	sim := NewSimulator(t)
 	defer sim.Cleanup()

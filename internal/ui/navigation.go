@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"home-inventory-system/internal/ui/components/categoryedit"
+	"home-inventory-system/internal/ui/components/itemedit"
 	"home-inventory-system/internal/ui/formcontroller"
 	"home-inventory-system/internal/ui/messages"
 )
@@ -111,11 +112,21 @@ func goToParent(m Model, parentID int64) (Model, tea.Cmd) {
 	return m, loadChildTypes(m.handler, parentID)
 }
 
-// openEditForm opens the appropriate right-pane edit form for the highlighted item/category.
+// openEditForm opens the appropriate right-pane edit form for the highlighted record.
 func openEditForm(m Model) (Model, tea.Cmd) {
 	if m.rightPane.category != nil && m.state == StateBrowsingTypes {
 		return openCategoryEditForm(m)
 	}
+	if m.rightPane.item != nil && m.state == StateViewingItems {
+		return openItemEditForm(m)
+	}
+	return m, nil
+}
+
+// openItemEditForm opens the item edit form in the right pane.
+func openItemEditForm(m Model) (Model, tea.Cmd) {
+	m.itemEditForm = itemedit.New(*m.rightPane.item)
+	m = transitionTo(m, StateEditingItem)
 	return m, nil
 }
 
