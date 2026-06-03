@@ -7,23 +7,6 @@ import (
 	"home-inventory-system/internal/ui/components/itemlist"
 )
 
-func TestNavigateUpFromItemSelected(t *testing.T) {
-	m := Model{
-		state:        StateItemSelected,
-		selectedItem: &domain.Item{ID: 1, Name: "Test Item"},
-	}
-
-	m, _ = navigateUpFromItemSelected(m)
-
-	if m.state != StateViewingItems {
-		t.Errorf("Expected state=%v, got %v", StateViewingItems, m.state)
-	}
-
-	if m.selectedItem != nil {
-		t.Error("Expected selectedItem to be cleared")
-	}
-}
-
 func TestNavigateUpFromItems_HasParent(t *testing.T) {
 	handler := setupTestHandler(t)
 
@@ -129,8 +112,8 @@ func TestSelectType(t *testing.T) {
 	}
 }
 
-func TestSelectItem(t *testing.T) {
-	// Create itemlist with a selected item
+func TestSelectItem_NoOpForRegularItems(t *testing.T) {
+	// Item detail is now shown live in the right pane; Enter on a regular item is a no-op.
 	list := itemlist.New()
 	list.SetLeafItems([]domain.Item{
 		{ID: 1, Name: "Laptop", ItemTypeID: 2},
@@ -141,14 +124,13 @@ func TestSelectItem(t *testing.T) {
 		itemList: list,
 	}
 
-	m, _ = selectItem(m)
+	result, cmd := selectItem(m)
 
-	if m.state != StateItemSelected {
-		t.Errorf("Expected state=%v, got %v", StateItemSelected, m.state)
+	if result.state != StateViewingItems {
+		t.Errorf("Expected state=%v (unchanged), got %v", StateViewingItems, result.state)
 	}
-
-	if m.selectedItem == nil {
-		t.Error("Expected selectedItem to be set")
+	if cmd != nil {
+		t.Error("Expected no command for regular item selection")
 	}
 }
 
@@ -201,11 +183,6 @@ func TestNavigateUp_FromDifferentStates(t *testing.T) {
 		hasCmd       bool
 	}{
 		{
-			name:         "from ItemSelected",
-			initialState: StateItemSelected,
-			hasCmd:       false, // Just transitions state
-		},
-		{
 			name:         "from ViewingItems",
 			initialState: StateViewingItems,
 			hasCmd:       true, // Loads parent/root
@@ -223,10 +200,6 @@ func TestNavigateUp_FromDifferentStates(t *testing.T) {
 				handler:       handler,
 				state:         tt.initialState,
 				currentTypeID: nil,
-			}
-
-			if tt.initialState == StateItemSelected {
-				m.selectedItem = &domain.Item{ID: 1, Name: "Test"}
 			}
 
 			_, cmd := navigateUp(m)

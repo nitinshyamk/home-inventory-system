@@ -10,7 +10,6 @@ func TestAppState_String(t *testing.T) {
 		{StateLoading, "Loading"},
 		{StateBrowsingTypes, "BrowsingTypes"},
 		{StateViewingItems, "ViewingItems"},
-		{StateItemSelected, "ItemSelected"},
 		{StateError, "Error"},
 	}
 
@@ -31,7 +30,6 @@ func TestAppState_CanNavigateUp(t *testing.T) {
 		{StateLoading, false},
 		{StateBrowsingTypes, true},
 		{StateViewingItems, true},
-		{StateItemSelected, true},
 		{StateError, false},
 	}
 
@@ -52,7 +50,6 @@ func TestAppState_CanSelectItem(t *testing.T) {
 		{StateLoading, false},
 		{StateBrowsingTypes, true},
 		{StateViewingItems, true},
-		{StateItemSelected, false},
 		{StateError, false},
 	}
 
@@ -73,7 +70,6 @@ func TestAppState_AllowsItemListDelegation(t *testing.T) {
 		{StateLoading, false},
 		{StateBrowsingTypes, true},
 		{StateViewingItems, true},
-		{StateItemSelected, false},
 		{StateError, false},
 	}
 

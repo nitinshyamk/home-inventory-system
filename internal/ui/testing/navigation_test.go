@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"home-inventory-system/internal/service"
@@ -58,6 +59,30 @@ func TestNavigateDown(t *testing.T) {
 	sim.AssertState(t, ui.StateBrowsingTypes)
 	sim.AssertListContains(t, "Pantry")
 	sim.AssertBreadcrumbContains(t, "Kitchen")
+}
+
+func TestRightPaneUpdatesOnNavigation(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Appliances"})
+	sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Kitchen"})
+
+	sim.Reload()
+
+	// The right pane should show whichever category is highlighted.
+	// After reload the list is at the first item (alphabetical order: Appliances).
+	sim.AssertListContains(t, "Appliances")
+
+	// Navigate down to highlight "Kitchen"
+	sim.SendKeys(KeyDown)
+
+	// Right pane should now show "Kitchen"
+	view := sim.View()
+	if !strings.Contains(view, "Kitchen") {
+		t.Errorf("Expected right pane to contain 'Kitchen' after navigating to it, got:\n%s", view)
+	}
 }
 
 func TestNavigateBack(t *testing.T) {

@@ -9,7 +9,6 @@ const (
 	StateLoading          AppState = iota
 	StateBrowsingTypes             // Navigating the type hierarchy
 	StateViewingItems              // Viewing items at a leaf node
-	StateItemSelected              // Viewing item details
 	StateCreatingCategory          // Creating a new category via form
 	StateCreatingItem              // Creating a new item via form
 	StateError
@@ -24,8 +23,6 @@ func (s AppState) String() string {
 		return "BrowsingTypes"
 	case StateViewingItems:
 		return "ViewingItems"
-	case StateItemSelected:
-		return "ItemSelected"
 	case StateCreatingCategory:
 		return "CreatingCategory"
 	case StateCreatingItem:
@@ -39,7 +36,7 @@ func (s AppState) String() string {
 
 // CanNavigateUp returns true if the current state allows upward navigation
 func (s AppState) CanNavigateUp() bool {
-	return s == StateBrowsingTypes || s == StateViewingItems || s == StateItemSelected
+	return s == StateBrowsingTypes || s == StateViewingItems
 }
 
 // CanSelectItem returns true if the current state allows selecting items

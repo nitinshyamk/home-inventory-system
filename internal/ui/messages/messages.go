@@ -53,3 +53,12 @@ type ItemCreatedMsg struct {
 	Item *domain.Item
 	Err  error
 }
+
+// RightPaneDetailMsg carries loaded count data for the right pane category detail.
+type RightPaneDetailMsg struct {
+	CategoryID int64
+	IsLeaf     bool
+	ChildCount int64
+	ItemCount  int64
+	Err        error
+}

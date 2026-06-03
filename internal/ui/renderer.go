@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"home-inventory-system/internal/domain"
+	"home-inventory-system/internal/ui/components/itemlist"
 	"home-inventory-system/internal/ui/components/modal"
 	"home-inventory-system/internal/ui/styles"
 )
@@ -23,8 +24,6 @@ func renderView(m Model) string {
 		return renderLoading()
 	case StateBrowsingTypes, StateViewingItems:
 		return renderMainView(m)
-	case StateItemSelected:
-		return renderItemDetails(m)
 	case StateCreatingCategory, StateCreatingItem:
 		return renderFormOverlay(m)
 	case StateError:
@@ -70,7 +69,7 @@ func renderSplitView(m Model) string {
 	}
 	sep := strings.Join(sepLines, "\n")
 
-	rightPane := lipgloss.NewStyle().Width(rightWidth).Height(paneHeight).Render(renderRightPane(m))
+	rightPane := lipgloss.NewStyle().Width(rightWidth).Height(paneHeight).Render(renderRightPane(m.rightPane))
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, leftPane, sep, rightPane)
 
@@ -82,10 +81,49 @@ func renderSplitView(m Model) string {
 	return b.String()
 }
 
-// renderRightPane renders the right pane content based on current model state.
-// Task 1: placeholder only. Subsequent tasks populate this with live detail.
-func renderRightPane(m Model) string {
+// renderRightPane renders the right pane content from cached detail data.
+func renderRightPane(p rightPaneContent) string {
+	if p.item != nil {
+		return renderItemDetailPane(p)
+	}
+	if p.category != nil {
+		return renderCategoryDetailPane(p)
+	}
 	return styles.DimStyle.Render("Select an item to see details")
+}
+
+// renderCategoryDetailPane renders a category's name, description, and child/item count.
+func renderCategoryDetailPane(p rightPaneContent) string {
+	var b strings.Builder
+	b.WriteString(styles.TitleStyle.Render(p.category.Name))
+	b.WriteString("\n")
+	if p.category.Description != "" {
+		b.WriteString(styles.DimStyle.Render("Description: " + p.category.Description))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
+	if p.isLeaf {
+		b.WriteString(styles.DimStyle.Render(fmt.Sprintf("Items:         %d", p.itemCount)))
+	} else {
+		b.WriteString(styles.DimStyle.Render(fmt.Sprintf("Subcategories: %d", p.childCount)))
+	}
+	return b.String()
+}
+
+// renderItemDetailPane renders an item's name, quantity, category path, and created date.
+func renderItemDetailPane(p rightPaneContent) string {
+	item := p.item
+	var b strings.Builder
+	b.WriteString(styles.TitleStyle.Render(item.Name))
+	b.WriteString("\n")
+	b.WriteString(styles.DimStyle.Render("Category:  " + getCategoryPath(p.itemTypePath)))
+	b.WriteString("\n")
+	b.WriteString(styles.NormalStyle.Render(
+		fmt.Sprintf("Quantity:  %s", itemlist.FormatQuantity(item.Quantity, item.UnitType)),
+	))
+	b.WriteString("\n")
+	b.WriteString(styles.DimStyle.Render("Created:   " + item.CreatedAt))
+	return b.String()
 }
 
 // splitPaneDimensions computes left/right pane widths and pane height.
@@ -97,34 +135,6 @@ func splitPaneDimensions(width, height int) (leftWidth, rightWidth, paneHeight i
 		paneHeight = 1
 	}
 	return
-}
-
-// renderItemDetails shows detailed view of selected item.
-func renderItemDetails(m Model) string {
-	if m.selectedItem == nil {
-		return renderMainView(m)
-	}
-
-	var b strings.Builder
-
-	// Breadcrumb
-	b.WriteString(renderBreadcrumb(m.breadcrumb))
-	b.WriteString("\n\n")
-
-	// Item details
-	b.WriteString(styles.TitleStyle.Render("Item Details"))
-	b.WriteString("\n\n")
-	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Name: %s", m.selectedItem.Name)))
-	b.WriteString("\n")
-	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Quantity: %.1f %s", m.selectedItem.Quantity, m.selectedItem.UnitType)))
-	b.WriteString("\n")
-	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Category: %s", getCategoryPath(m.breadcrumb))))
-	b.WriteString("\n")
-	b.WriteString(styles.DimStyle.Render(fmt.Sprintf("Created: %s", m.selectedItem.CreatedAt)))
-	b.WriteString("\n\n")
-	b.WriteString(styles.HelpStyle.Render("Press ESC/C-b/← to go back, q to quit"))
-
-	return b.String()
 }
 
 // getCategoryPath returns the full category path as a plain string.

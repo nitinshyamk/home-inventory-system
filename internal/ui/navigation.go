@@ -12,8 +12,6 @@ import (
 // navigateUp moves up one level in the hierarchy based on current state.
 func navigateUp(m Model) (Model, tea.Cmd) {
 	switch m.state {
-	case StateItemSelected:
-		return navigateUpFromItemSelected(m)
 	case StateViewingItems:
 		return navigateUpFromItems(m)
 	case StateBrowsingTypes:
@@ -21,13 +19,6 @@ func navigateUp(m Model) (Model, tea.Cmd) {
 	default:
 		return m, nil
 	}
-}
-
-// navigateUpFromItemSelected returns to item list view.
-func navigateUpFromItemSelected(m Model) (Model, tea.Cmd) {
-	m = transitionTo(m, StateViewingItems)
-	m.selectedItem = nil
-	return m, nil
 }
 
 // navigateUpFromItems navigates from item view back to parent type or root.
@@ -96,20 +87,13 @@ func selectType(m Model) (Model, tea.Cmd) {
 	return handleTypeSelected(m, messages.TypeSelectedMsg{Type: *selected})
 }
 
-// selectItem handles selection of an item (shows details).
+// selectItem handles selection of an item.
+// Item details are shown live in the right pane, so Enter is a no-op for items
+// unless the "+ Add New Item" entry is selected.
 func selectItem(m Model) (Model, tea.Cmd) {
-	// Check if "+ Add New Item" is selected
 	if m.itemList.SelectedAddNewItem() {
 		return openItemCreationForm(m)
 	}
-
-	selected := m.itemList.SelectedLeafItem()
-	if selected == nil {
-		return m, nil
-	}
-
-	m.selectedItem = selected
-	m = transitionTo(m, StateItemSelected)
 	return m, nil
 }
 

@@ -78,18 +78,33 @@ func (s *Simulator) SendKey(key KeyEvent) {
 	s.processUpdate(s.model.Update(key.msg))
 }
 
-// processUpdate processes a model update and any resulting commands recursively
+// processUpdate processes a model update and any resulting commands recursively.
+// Handles tea.BatchMsg so that all commands in a batch are executed in order.
 func (s *Simulator) processUpdate(teaModel tea.Model, cmd tea.Cmd) {
 	s.model = teaModel.(ui.Model)
-
-	// Execute any resulting command synchronously and process the result
 	if cmd != nil {
-		msg := cmd()
-		if msg != nil {
-			// Recursively process the resulting message
-			s.processUpdate(s.model.Update(msg))
-		}
+		s.processCmd(cmd)
 	}
+}
+
+// processCmd executes a command and processes the resulting message, expanding
+// tea.BatchMsg so every command in the batch is run.
+func (s *Simulator) processCmd(cmd tea.Cmd) {
+	if cmd == nil {
+		return
+	}
+	msg := cmd()
+	if msg == nil {
+		return
+	}
+	// Bubbletea's runtime intercepts BatchMsg before Update; we replicate that here.
+	if batch, ok := msg.(tea.BatchMsg); ok {
+		for _, c := range batch {
+			s.processCmd(c)
+		}
+		return
+	}
+	s.processUpdate(s.model.Update(msg))
 }
 
 // SendKeys sends a sequence of keyboard events to the UI

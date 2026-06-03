@@ -41,13 +41,15 @@ func handleTypesLoaded(m Model, msg messages.TypesLoadedMsg) (Model, tea.Cmd) {
 	m = transitionTo(m, StateBrowsingTypes)
 	m.currentTypeID = msg.ParentID
 
-	// Load breadcrumb if not at root
+	// Seed right pane with first category detail if available
+	m, rightCmd := refreshRightPane(m)
+
 	if msg.ParentID != nil {
-		return m, loadBreadcrumb(m.handler, *msg.ParentID)
+		return m, tea.Batch(loadBreadcrumb(m.handler, *msg.ParentID), rightCmd)
 	}
 
 	m = clearBreadcrumb(m)
-	return m, nil
+	return m, rightCmd
 }
 
 // handleLeafItemsLoaded processes loaded items and switches to viewing state.
@@ -59,6 +61,7 @@ func handleLeafItemsLoaded(m Model, msg messages.LeafItemsLoadedMsg) (Model, tea
 	m.items = msg.Items
 	m.itemList.SetLeafItems(msg.Items)
 	m = transitionTo(m, StateViewingItems)
+	m, _ = refreshRightPane(m) // synchronous for items, no cmd needed
 	return m, nil
 }
 
@@ -108,11 +111,28 @@ func setError(m Model, err error) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// delegateToItemList passes messages to the itemlist component for handling.
+// delegateToItemList passes messages to the itemlist component and refreshes
+// the right pane detail for the newly highlighted row.
 func delegateToItemList(m Model, msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.itemList, cmd = m.itemList.Update(msg)
-	return m, cmd
+	m, detailCmd := refreshRightPane(m)
+	return m, tea.Batch(cmd, detailCmd)
+}
+
+// refreshRightPane updates right pane state based on the current itemList selection.
+// For items, this is synchronous. For categories, it fires an async count load.
+func refreshRightPane(m Model) (Model, tea.Cmd) {
+	if selectedType := m.itemList.SelectedType(); selectedType != nil {
+		m.rightPane = rightPaneContent{category: selectedType}
+		return m, loadCategoryDetail(m.handler, selectedType.ID)
+	}
+	if selectedItem := m.itemList.SelectedLeafItem(); selectedItem != nil {
+		m.rightPane = rightPaneContent{item: selectedItem, itemTypePath: m.breadcrumb}
+		return m, nil
+	}
+	m.rightPane = rightPaneContent{}
+	return m, nil
 }
 
 // delegateToCategoryForm passes messages to the category form component.
@@ -172,6 +192,20 @@ func handleFormCancelled(m Model) (Model, tea.Cmd) {
 	case StateCreatingItem:
 		// Return to viewing items
 		m = transitionTo(m, StateViewingItems)
+	}
+	return m, nil
+}
+
+// handleRightPaneDetail updates the right pane with loaded category count data.
+func handleRightPaneDetail(m Model, msg messages.RightPaneDetailMsg) (Model, tea.Cmd) {
+	if msg.Err != nil {
+		return m, nil // non-fatal: keep existing right pane content
+	}
+	// Only apply if the right pane is still showing the same category
+	if m.rightPane.category != nil && m.rightPane.category.ID == msg.CategoryID {
+		m.rightPane.isLeaf = msg.IsLeaf
+		m.rightPane.childCount = msg.ChildCount
+		m.rightPane.itemCount = msg.ItemCount
 	}
 	return m, nil
 }

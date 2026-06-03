@@ -54,52 +54,61 @@ func TestRenderView_ViewingItems(t *testing.T) {
 	}
 }
 
-func TestRenderItemDetails(t *testing.T) {
+func TestRenderRightPane_Category(t *testing.T) {
 	m := Model{
-		state: StateItemSelected,
-		selectedItem: &domain.Item{
-			ID:         1,
-			Name:       "Test Laptop",
-			ItemTypeID: 2,
-			CreatedAt:  time.Now().Format(time.RFC3339),
-		},
-		breadcrumb: []domain.ItemType{
-			{ID: 1, Name: "Electronics"},
-			{ID: 2, Name: "Computers"},
-		},
+		state:    StateBrowsingTypes,
+		width:    100,
+		height:   30,
 		itemList: itemlist.New(),
+		rightPane: rightPaneContent{
+			category:   &domain.ItemType{ID: 1, Name: "Electronics", Description: "Electronic devices"},
+			isLeaf:     false,
+			childCount: 3,
+		},
 	}
 
-	output := renderItemDetails(m)
+	output := renderRightPane(m.rightPane)
 
-	requiredStrings := []string{
-		"Home",
-		"Electronics",
-		"Computers",
-		"Item Details",
-		"Test Laptop",
-		"Created:",
+	if !strings.Contains(output, "Electronics") {
+		t.Error("Expected category name 'Electronics' in right pane")
 	}
-
-	for _, required := range requiredStrings {
-		if !strings.Contains(output, required) {
-			t.Errorf("Expected %q in item details view, got: %s", required, output)
-		}
+	if !strings.Contains(output, "Subcategories: 3") {
+		t.Error("Expected subcategory count in right pane")
 	}
 }
 
-func TestRenderItemDetails_NilItem(t *testing.T) {
+func TestRenderRightPane_Item(t *testing.T) {
 	m := Model{
-		state:        StateItemSelected,
-		selectedItem: nil,
-		itemList:     itemlist.New(),
+		state:    StateViewingItems,
+		width:    100,
+		height:   30,
+		itemList: itemlist.New(),
+		rightPane: rightPaneContent{
+			item: &domain.Item{
+				ID:         1,
+				Name:       "Rice Bag",
+				ItemTypeID: 2,
+				Quantity:   5000.0,
+				UnitType:   "Grams",
+				CreatedAt:  time.Now().Format(time.RFC3339),
+			},
+			itemTypePath: []domain.ItemType{
+				{ID: 1, Name: "Kitchen"},
+				{ID: 2, Name: "Pantry"},
+			},
+		},
 	}
 
-	output := renderItemDetails(m)
+	output := renderRightPane(m.rightPane)
 
-	// Should fall back to main view
-	if !strings.Contains(output, "Home") {
-		t.Error("Expected fallback to main view when item is nil")
+	if !strings.Contains(output, "Rice Bag") {
+		t.Error("Expected item name 'Rice Bag' in right pane")
+	}
+	if !strings.Contains(output, "Kitchen") {
+		t.Error("Expected category path in right pane")
+	}
+	if !strings.Contains(output, "lbs") {
+		t.Error("Expected formatted quantity in right pane (5000g → lbs)")
 	}
 }
 

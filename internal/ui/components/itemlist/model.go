@@ -65,6 +65,11 @@ func (i addNewItemItem) FilterValue() string { return "+ Add New Item" }
 // - Count: Rounded to nearest integer (e.g., "5" not "5.0")
 // - Grams: Displays as oz; if >= 16 oz, displays as lbs with decimal (e.g., "1.5 lbs")
 // - Liters: Displays as fl oz; if >= 128 fl oz (1 gallon), displays as gal with decimal (e.g., "2.3 gal")
+// FormatQuantity formats a quantity and unit type for display with automatic unit conversions.
+func FormatQuantity(quantity float64, unitType domain.UnitType) string {
+	return formatQuantity(quantity, unitType)
+}
+
 func formatQuantity(quantity float64, unitType domain.UnitType) string {
 	switch unitType {
 	case domain.UnitTypeCount:

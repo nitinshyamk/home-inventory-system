@@ -12,13 +12,26 @@ import (
 	"home-inventory-system/internal/ui/messages"
 )
 
+// rightPaneContent holds cached data for the right pane detail view.
+type rightPaneContent struct {
+	// Category detail (category != nil)
+	category   *domain.ItemType
+	isLeaf     bool
+	childCount int64
+	itemCount  int64
+
+	// Item detail (item != nil)
+	item         *domain.Item
+	itemTypePath []domain.ItemType // breadcrumb at the time the item was highlighted
+}
+
 // Model is the main application model
 type Model struct {
 	state          AppState
 	itemList       itemlist.Model
-	categoryForm   categoryform.Model       // Category form component
-	itemForm       itemform.Model           // Item form component
-	formController *formcontroller.Controller // Form lifecycle manager
+	categoryForm   categoryform.Model
+	itemForm       itemform.Model
+	formController *formcontroller.Controller
 	handler        *service.Handler
 	err            error
 	width          int
@@ -26,7 +39,7 @@ type Model struct {
 	breadcrumb     []domain.ItemType // Current path in hierarchy
 	currentTypeID  *int64            // nil = root level
 	items          []domain.Item     // Items at current leaf node
-	selectedItem   *domain.Item
+	rightPane      rightPaneContent  // Cached detail for the right pane
 }
 
 // NewModel creates a new application model
@@ -79,6 +92,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.ItemCreatedMsg:
 		return handleItemCreated(m, msg)
+
+	case messages.RightPaneDetailMsg:
+		return handleRightPaneDetail(m, msg)
 	}
 
 	// Pass messages to item list when in browsing state
@@ -116,11 +132,9 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return selectCurrent(m)
 	}
 
-	// Pass to itemlist for navigation
+	// Pass to itemlist for navigation; also refreshes right pane detail
 	if m.state.AllowsItemListDelegation() {
-		var cmd tea.Cmd
-		m.itemList, cmd = m.itemList.Update(msg)
-		return m, cmd
+		return delegateToItemList(m, msg)
 	}
 
 	return m, nil

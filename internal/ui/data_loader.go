@@ -71,6 +71,41 @@ func loadBreadcrumb(handler *service.Handler, typeID int64) tea.Cmd {
 	}
 }
 
+// loadCategoryDetail fetches category count data for the right pane detail view.
+// Returns a RightPaneDetailMsg with IsLeaf, ChildCount, or ItemCount.
+func loadCategoryDetail(handler *service.Handler, typeID int64) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		leafResult, ok := handler.HandleQuery(ctx, service.IsLeafTypeQuery{TypeID: typeID}).(service.IsLeafTypeResult)
+		if !ok || leafResult.Err != nil {
+			return messages.RightPaneDetailMsg{CategoryID: typeID, Err: leafResult.Err}
+		}
+
+		if leafResult.IsLeaf {
+			countResult, ok := handler.HandleQuery(ctx, service.CountItemsByTypeQuery{TypeID: typeID}).(service.CountItemsByTypeResult)
+			if !ok || countResult.Err != nil {
+				return messages.RightPaneDetailMsg{CategoryID: typeID, Err: countResult.Err}
+			}
+			return messages.RightPaneDetailMsg{
+				CategoryID: typeID,
+				IsLeaf:     true,
+				ItemCount:  countResult.Count,
+			}
+		}
+
+		childResult, ok := handler.HandleQuery(ctx, service.ListChildTypesQuery{ParentID: typeID}).(service.ListChildTypesResult)
+		if !ok || childResult.Err != nil {
+			return messages.RightPaneDetailMsg{CategoryID: typeID, Err: childResult.Err}
+		}
+		return messages.RightPaneDetailMsg{
+			CategoryID: typeID,
+			IsLeaf:     false,
+			ChildCount: int64(len(childResult.Types)),
+		}
+	}
+}
+
 // checkLeafType asynchronously checks if a type is a leaf (has no children).
 // Emits LeafCheckCompleteMsg when done.
 func checkLeafType(handler *service.Handler, typeID int64) tea.Cmd {

@@ -65,3 +65,14 @@ Migrations live in `internal/db/migrations/` and are embedded in the binary. The
 - `C-a/C-e`: Go to start/end of list
 - `/`: Filter items
 - `q`: Quit
+
+## Testing
+
+Write tests using only the standard `testing` package—no testify, gomock, or assertion libraries. Every test that touches data uses a real in-memory SQLite database (`:memory:`) with full migrations applied via `db.RunMigrations`; never mock the database. Tests are organized per layer: repository tests call repo methods directly, service tests drive `HandleCommand`/`HandleQuery` on the Handler, UI unit tests cover pure functions and message handlers in isolation, and UI interaction flows use the `Simulator` harness in `internal/ui/testing/`. Use table-driven tests for multiple input/output scenarios. Seed test data through service commands, not raw SQL. All test files live in the same package as the code they test (white-box access).
+
+### Details
+
+- **Never mock the database.** SQLite triggers enforce the leaf-node constraint; tests must exercise real SQLite to catch trigger violations and constraint errors. This is the codebase's most important testing invariant.
+- **`t.Fatalf` vs `t.Errorf`.** Use `t.Fatalf` when a setup or precondition failure makes continuing the test meaningless (e.g. failing to create the DB or seed required data). Use `t.Errorf` for assertion failures where subsequent checks still provide value.
+- **Setup helpers** call `t.Helper()` and return a cleanup `func()` called with `defer`. Pattern: `setupTestDB(t)` for repository tests, `setupTestHandler(t)` for service and UI unit tests (defined in `internal/ui/testing.go`).
+- **Use the Simulator for UI interaction tests.** Any test requiring key presses, form fills, or multi-step navigation belongs in `internal/ui/testing/` using the `Simulator`. It drives the Bubbletea `Update` loop synchronously—including recursive command execution—so tests don't need to manually chain commands.
