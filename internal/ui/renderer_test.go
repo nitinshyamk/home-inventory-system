@@ -159,6 +159,57 @@ func TestRenderMainView(t *testing.T) {
 	}
 }
 
+func TestRenderSplitPane_Wide(t *testing.T) {
+	m := Model{
+		state:    StateBrowsingTypes,
+		width:    100,
+		height:   30,
+		itemList: itemlist.New(),
+	}
+	m.itemList.SetSize(40, 26)
+
+	output := renderView(m)
+
+	if !strings.Contains(output, "│") {
+		t.Error("Expected vertical separator │ in wide split-pane layout")
+	}
+}
+
+func TestRenderSplitPane_Narrow(t *testing.T) {
+	m := Model{
+		state:    StateBrowsingTypes,
+		width:    60,
+		height:   24,
+		itemList: itemlist.New(),
+	}
+	m.itemList.SetSize(60, 20)
+
+	output := renderView(m)
+
+	if strings.Contains(output, "│") {
+		t.Error("Expected no vertical separator │ in narrow layout")
+	}
+}
+
+func TestRenderSplitPane_PaneWidths(t *testing.T) {
+	const termWidth = 100
+	leftWidth, rightWidth, paneHeight := splitPaneDimensions(termWidth, 30)
+
+	if leftWidth <= 0 {
+		t.Errorf("Expected positive left pane width, got %d", leftWidth)
+	}
+	if rightWidth <= 0 {
+		t.Errorf("Expected positive right pane width, got %d", rightWidth)
+	}
+	if leftWidth+rightWidth+1 != termWidth {
+		t.Errorf("Pane widths should sum to terminal width: %d + %d + 1 = %d, want %d",
+			leftWidth, rightWidth, leftWidth+rightWidth+1, termWidth)
+	}
+	if paneHeight <= 0 {
+		t.Errorf("Expected positive pane height, got %d", paneHeight)
+	}
+}
+
 func TestRenderView_UnknownState(t *testing.T) {
 	m := Model{state: AppState(999)} // Invalid state
 

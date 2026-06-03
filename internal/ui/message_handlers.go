@@ -16,7 +16,18 @@ import (
 func handleWindowResize(m Model, msg tea.WindowSizeMsg) (Model, tea.Cmd) {
 	m.width = msg.Width
 	m.height = msg.Height
-	m.itemList.SetSize(msg.Width, msg.Height-6) // Leave room for breadcrumb and help
+
+	var listWidth, paneHeight int
+	if msg.Width >= splitPaneMinWidth {
+		listWidth, _, paneHeight = splitPaneDimensions(msg.Width, msg.Height)
+	} else {
+		listWidth = msg.Width
+		paneHeight = msg.Height - 4
+		if paneHeight < 1 {
+			paneHeight = 1
+		}
+	}
+	m.itemList.SetSize(listWidth, paneHeight)
 	return m, nil
 }
 
