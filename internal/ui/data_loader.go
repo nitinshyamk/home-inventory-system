@@ -72,6 +72,22 @@ func loadBreadcrumb(handler *service.Handler, typeID int64) tea.Cmd {
 	}
 }
 
+// loadCategoryChildSummary fetches the child type count, item count, and parent ID for the delete confirmation.
+func loadCategoryChildSummary(handler *service.Handler, typeID int64) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		result, ok := handler.HandleQuery(ctx, service.GetCategoryChildSummaryQuery{ID: typeID}).(service.GetCategoryChildSummaryResult)
+		if !ok || result.Err != nil {
+			return messages.CategoryChildSummaryLoadedMsg{Err: result.Err}
+		}
+		return messages.CategoryChildSummaryLoadedMsg{
+			ChildTypeCount: result.ChildTypeCount,
+			ItemCount:      result.ItemCount,
+			ParentID:       result.ParentID,
+		}
+	}
+}
+
 // loadLeafTypesWithPaths fetches all leaf categories and their full ancestor paths.
 // Used to populate the category picker.
 func loadLeafTypesWithPaths(handler *service.Handler) tea.Cmd {

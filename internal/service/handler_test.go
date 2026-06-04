@@ -262,6 +262,31 @@ func TestHandleListLeafTypesQuery(t *testing.T) {
 	}
 }
 
+func TestHandleGetCategoryChildSummaryQuery(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	kitchen := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+	handler.HandleCommand(ctx, CreateChildTypeCommand{ParentID: kitchen.Type.ID, Name: "Pantry"})
+	handler.HandleCommand(ctx, CreateChildTypeCommand{ParentID: kitchen.Type.ID, Name: "Appliances"})
+
+	result := handler.HandleQuery(ctx, GetCategoryChildSummaryQuery{ID: kitchen.Type.ID}).(GetCategoryChildSummaryResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if result.ChildTypeCount != 2 {
+		t.Errorf("expected 2 children, got %d", result.ChildTypeCount)
+	}
+	if result.ItemCount != 0 {
+		t.Errorf("expected 0 items, got %d", result.ItemCount)
+	}
+	if result.ParentID != nil {
+		t.Errorf("expected nil parent for root type, got %v", result.ParentID)
+	}
+}
+
 func TestHandleUpdateItemCommand_Success(t *testing.T) {
 	handler, cleanup := setupTestHandler(t)
 	defer cleanup()

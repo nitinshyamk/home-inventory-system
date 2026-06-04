@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"home-inventory-system/internal/service"
@@ -249,6 +250,91 @@ func TestFormNavigationWithTab(t *testing.T) {
 
 	// Verify both fields were filled
 	sim.AssertCategoryExists(t, "Kitchen", "Description")
+}
+
+func TestDeleteCategory_Empty(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Empty"})
+	sim.Reload()
+
+	sim.SendKeys(Type("d"))
+	sim.AssertState(t, ui.StateDeletingCategory)
+
+	// Confirm deletion of empty category
+	sim.SendKeys(KeyEnter)
+	sim.AssertState(t, ui.StateBrowsingTypes)
+	sim.AssertListNotContains(t, "Empty")
+	sim.AssertNoError(t)
+}
+
+func TestDeleteCategory_Cancel(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Keep"})
+	sim.Reload()
+
+	sim.SendKeys(Type("d"))
+	sim.AssertState(t, ui.StateDeletingCategory)
+
+	sim.SendKeys(KeyTab, KeyEnter) // Tab to Cancel, Enter
+	sim.AssertState(t, ui.StateBrowsingTypes)
+	sim.AssertListContains(t, "Keep")
+	sim.AssertNoError(t)
+}
+
+func TestDeleteCategory_ShowsSubcategoryImpact(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	kitchenResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Kitchen"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateChildTypeCommand{ParentID: kitchenResult.Type.ID, Name: "Pantry"})
+	sim.Reload()
+
+	sim.SendKeys(Type("d"))
+	sim.AssertState(t, ui.StateDeletingCategory)
+
+	// Right pane should show impact info
+	view := sim.View()
+	if !strings.Contains(view, "subcategor") {
+		t.Errorf("expected subcategory impact text in confirmation view, got:\n%s", view)
+	}
+
+	// Cancel
+	sim.SendKeys(KeyEsc)
+	sim.AssertState(t, ui.StateBrowsingTypes)
+}
+
+func TestDeleteCategory_RootWithItemsRejection(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	catResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "RootWithItems"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Spoon", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	sim.SendKeys(Type("d"))
+	sim.AssertState(t, ui.StateDeletingCategory)
+
+	// Right pane should show rejection (no Confirm button, just Cancel)
+	view := sim.View()
+	if !strings.Contains(view, "cannot") && !strings.Contains(view, "Cannot") {
+		t.Errorf("expected rejection message in confirmation view, got:\n%s", view)
+	}
+
+	// Only Cancel is available — Esc should return to browsing
+	sim.SendKeys(KeyEsc)
+	sim.AssertState(t, ui.StateBrowsingTypes)
+	// Category should still exist
+	sim.AssertListContains(t, "RootWithItems")
 }
 
 func TestDeleteItem_Confirm(t *testing.T) {

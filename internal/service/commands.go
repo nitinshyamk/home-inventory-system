@@ -83,6 +83,23 @@ type ListLeafTypesQuery struct{}
 
 func (ListLeafTypesQuery) isQuery() {}
 
+// GetCategoryChildSummaryQuery requests child type count, item count, and parent ID for a category
+type GetCategoryChildSummaryQuery struct {
+	ID int64
+}
+
+func (GetCategoryChildSummaryQuery) isQuery() {}
+
+// GetCategoryChildSummaryResult contains the category child summary
+type GetCategoryChildSummaryResult struct {
+	ChildTypeCount int
+	ItemCount      int
+	ParentID       *int64
+	Err            error
+}
+
+func (GetCategoryChildSummaryResult) isQueryResult() {}
+
 // --- Query Results ---
 
 // QueryResult represents the result of a query operation

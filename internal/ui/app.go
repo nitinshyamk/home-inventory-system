@@ -15,6 +15,13 @@ import (
 	"home-inventory-system/internal/ui/messages"
 )
 
+// deleteCategorySummary holds the loaded child summary for the category delete confirmation.
+type deleteCategorySummary struct {
+	childTypeCount int
+	itemCount      int
+	parentID       *int64
+}
+
 // rightPaneContent holds cached data for the right pane detail view.
 type rightPaneContent struct {
 	// Category detail (category != nil)
@@ -37,7 +44,8 @@ type Model struct {
 	itemEditForm       itemedit.Model
 	categoryPicker     categorypicker.Model
 	itemForm           itemform.Model
-	deleteConfirmFocus int // 0=Confirm, 1=Cancel (for delete confirmation dialogs)
+	deleteConfirmFocus int    // 0=Confirm, 1=Cancel
+	deleteSummary      *deleteCategorySummary
 	formController   *formcontroller.Controller
 	handler          *service.Handler
 	err              error
@@ -114,6 +122,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.ItemDeletedMsg:
 		return handleItemDeleted(m, msg)
+
+	case messages.CategoryDeletedMsg:
+		return handleCategoryDeleted(m, msg)
+
+	case messages.CategoryChildSummaryLoadedMsg:
+		return handleCategoryChildSummaryLoaded(m, msg)
 	}
 
 	// Pass messages to item list when in browsing state
@@ -149,6 +163,12 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		return handleDeleteItemConfirmKey(m, msg)
+	}
+	if m.state == StateDeletingCategory {
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+		return handleDeleteCategoryConfirmKey(m, msg)
 	}
 
 	// When in modal form state, delegate all keys to the form (except ctrl+c)

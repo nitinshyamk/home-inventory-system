@@ -361,6 +361,82 @@ func deleteItem(handler *service.Handler, id int64, typeID int64) tea.Cmd {
 	}
 }
 
+// handleCategoryChildSummaryLoaded stores the loaded summary for the delete confirmation.
+func handleCategoryChildSummaryLoaded(m Model, msg messages.CategoryChildSummaryLoadedMsg) (Model, tea.Cmd) {
+	if msg.Err != nil {
+		return setError(m, msg.Err)
+	}
+	m.deleteSummary = &deleteCategorySummary{
+		childTypeCount: msg.ChildTypeCount,
+		itemCount:      msg.ItemCount,
+		parentID:       msg.ParentID,
+	}
+	return m, nil
+}
+
+// handleDeleteCategoryConfirmKey handles key events in the category delete confirmation state.
+func handleDeleteCategoryConfirmKey(m Model, msg tea.Msg) (Model, tea.Cmd) {
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return m, nil
+	}
+
+	// If the category has root-level items, only Cancel is available
+	isRootWithItems := m.deleteSummary != nil &&
+		m.deleteSummary.parentID == nil &&
+		m.deleteSummary.itemCount > 0
+
+	switch keyMsg.String() {
+	case "esc":
+		m = transitionTo(m, StateBrowsingTypes)
+	case "tab", "shift+tab":
+		if !isRootWithItems {
+			m.deleteConfirmFocus = 1 - m.deleteConfirmFocus
+		}
+	case "enter":
+		if isRootWithItems || m.deleteConfirmFocus == 1 { // Cancel
+			m = transitionTo(m, StateBrowsingTypes)
+			return m, nil
+		}
+		// Confirm Delete (Task 7: only works for empty categories; lift handled in Task 8)
+		cat := m.rightPane.category
+		return m, deleteCategorySimple(m.handler, cat.ID, m.deleteSummary)
+	}
+	return m, nil
+}
+
+// deleteCategorySimple uses the existing DeleteItemTypeCommand (no lift).
+// For Task 7, this handles the empty category case. Lift is added in Task 8.
+func deleteCategorySimple(handler *service.Handler, id int64, summary *deleteCategorySummary) tea.Cmd {
+	return func() tea.Msg {
+		var parentID *int64
+		if summary != nil {
+			parentID = summary.parentID
+		}
+		result, ok := handler.HandleCommand(context.Background(), service.DeleteItemTypeCommand{ID: id}).(service.DeleteItemTypeResult)
+		if !ok {
+			return messages.CategoryDeletedMsg{Err: fmt.Errorf("unexpected result type")}
+		}
+		return messages.CategoryDeletedMsg{DeletedID: id, ParentID: parentID, Err: result.Err}
+	}
+}
+
+// handleCategoryDeleted processes the result of a category delete.
+func handleCategoryDeleted(m Model, msg messages.CategoryDeletedMsg) (Model, tea.Cmd) {
+	if msg.Err != nil {
+		// Show error inline in right pane (non-fatal: stay in DeletingCategory)
+		// For now, surface it as a setError; Task 8 will improve this.
+		return setError(m, msg.Err)
+	}
+	m = transitionTo(m, StateBrowsingTypes)
+	m.rightPane = rightPaneContent{}
+	m.deleteSummary = nil
+	if msg.ParentID == nil {
+		return m, loadRootTypes(m.handler)
+	}
+	return m, loadChildTypes(m.handler, *msg.ParentID)
+}
+
 // handleItemDeleted processes the result of an item delete.
 func handleItemDeleted(m Model, msg messages.ItemDeletedMsg) (Model, tea.Cmd) {
 	if msg.Err != nil {

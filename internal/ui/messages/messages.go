@@ -54,6 +54,21 @@ type ItemCreatedMsg struct {
 	Err  error
 }
 
+// CategoryDeletedMsg is sent when a category is successfully deleted
+type CategoryDeletedMsg struct {
+	DeletedID int64
+	ParentID  *int64
+	Err       error
+}
+
+// CategoryChildSummaryLoadedMsg carries the child summary for the delete confirmation
+type CategoryChildSummaryLoadedMsg struct {
+	ChildTypeCount int
+	ItemCount      int
+	ParentID       *int64
+	Err            error
+}
+
 // ItemDeletedMsg is sent when an item is successfully deleted
 type ItemDeletedMsg struct {
 	DeletedID int64

@@ -42,6 +42,8 @@ func (h *Handler) HandleQuery(ctx context.Context, q Query) QueryResult {
 		return h.handleCountItemsByType(ctx, query)
 	case ListLeafTypesQuery:
 		return h.handleListLeafTypes(ctx)
+	case GetCategoryChildSummaryQuery:
+		return h.handleGetCategoryChildSummary(ctx, query)
 	default:
 		return nil
 	}
@@ -109,6 +111,29 @@ func (h *Handler) handleListItemsByType(ctx context.Context, q ListItemsByTypeQu
 func (h *Handler) handleCountItemsByType(ctx context.Context, q CountItemsByTypeQuery) CountItemsByTypeResult {
 	count, err := h.repo.CountItemsByType(ctx, q.TypeID)
 	return CountItemsByTypeResult{Count: count, Err: err}
+}
+
+func (h *Handler) handleGetCategoryChildSummary(ctx context.Context, q GetCategoryChildSummaryQuery) GetCategoryChildSummaryResult {
+	itemType, err := h.repo.GetItemType(ctx, q.ID)
+	if err != nil {
+		return GetCategoryChildSummaryResult{Err: err}
+	}
+
+	children, err := h.repo.GetChildTypes(ctx, q.ID)
+	if err != nil {
+		return GetCategoryChildSummaryResult{Err: err}
+	}
+
+	itemCount, err := h.repo.CountItemsByType(ctx, q.ID)
+	if err != nil {
+		return GetCategoryChildSummaryResult{Err: err}
+	}
+
+	return GetCategoryChildSummaryResult{
+		ChildTypeCount: len(children),
+		ItemCount:      int(itemCount),
+		ParentID:       itemType.ParentID,
+	}
 }
 
 func (h *Handler) handleListLeafTypes(ctx context.Context) ListLeafTypesResult {

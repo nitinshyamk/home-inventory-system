@@ -22,7 +22,8 @@ func renderView(m Model) string {
 	switch m.state {
 	case StateLoading:
 		return renderLoading()
-	case StateBrowsingTypes, StateViewingItems, StateEditingCategory, StateEditingItem, StatePickingCategory, StateDeletingItem:
+	case StateBrowsingTypes, StateViewingItems, StateEditingCategory, StateEditingItem,
+		StatePickingCategory, StateDeletingItem, StateDeletingCategory:
 		return renderMainView(m)
 	case StateCreatingCategory, StateCreatingItem:
 		return renderFormOverlay(m)
@@ -92,6 +93,8 @@ func renderRightPaneForModel(m Model) string {
 		return m.categoryPicker.View()
 	case StateDeletingItem:
 		return renderItemDeleteConfirm(m)
+	case StateDeletingCategory:
+		return renderCategoryDeleteConfirm(m)
 	}
 	return renderRightPane(m.rightPane)
 }
@@ -135,6 +138,82 @@ func renderConfirmButtons(focusIndex int) string {
 		cancelStyle = focused
 	}
 	return confirmStyle.Render("[ Confirm Delete ]") + "   " + cancelStyle.Render("[ Cancel ]")
+}
+
+// renderCategoryDeleteConfirm renders the category delete confirmation in the right pane.
+func renderCategoryDeleteConfirm(m Model) string {
+	if m.rightPane.category == nil {
+		return renderRightPane(m.rightPane)
+	}
+	cat := m.rightPane.category
+	sum := m.deleteSummary
+
+	var b strings.Builder
+	b.WriteString(styles.TitleStyle.Render("Delete Category"))
+	b.WriteString("\n\n")
+
+	if sum == nil {
+		// Still loading the summary
+		b.WriteString(styles.DimStyle.Render("Loading..."))
+		return b.String()
+	}
+
+	// Root-level with items → rejection
+	if sum.parentID == nil && sum.itemCount > 0 {
+		b.WriteString(styles.ErrorStyle.Render(fmt.Sprintf("Cannot delete %q", cat.Name)))
+		b.WriteString("\n\n")
+		b.WriteString(styles.NormalStyle.Render("This category contains items that"))
+		b.WriteString("\n")
+		b.WriteString(styles.NormalStyle.Render("cannot be lifted to the root level."))
+		b.WriteString("\n\n")
+		b.WriteString(styles.DimStyle.Render("Move or delete the items first."))
+		b.WriteString("\n\n")
+		b.WriteString(styles.NormalStyle.Render("[ Cancel ]"))
+		return b.String()
+	}
+
+	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Delete %q?", cat.Name)))
+	b.WriteString("\n")
+
+	if sum.childTypeCount > 0 {
+		parentName := "Home"
+		if len(m.breadcrumb) >= 2 {
+			parentName = m.breadcrumb[len(m.breadcrumb)-2].Name
+		}
+		b.WriteString(styles.DimStyle.Render(fmt.Sprintf(
+			"%d subcategor%s will be moved up to %q.",
+			sum.childTypeCount, pluralIes(sum.childTypeCount), parentName,
+		)))
+	} else if sum.itemCount > 0 {
+		parentName := "Home"
+		if len(m.breadcrumb) >= 2 {
+			parentName = m.breadcrumb[len(m.breadcrumb)-2].Name
+		}
+		b.WriteString(styles.DimStyle.Render(fmt.Sprintf(
+			"%d item%s will be moved up to %q.",
+			sum.itemCount, pluralS(sum.itemCount), parentName,
+		)))
+	} else {
+		b.WriteString(styles.DimStyle.Render("This action cannot be undone."))
+	}
+
+	b.WriteString("\n\n")
+	b.WriteString(renderConfirmButtons(m.deleteConfirmFocus))
+	return b.String()
+}
+
+func pluralIes(n int) string {
+	if n == 1 {
+		return "y"
+	}
+	return "ies"
+}
+
+func pluralS(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
 }
 
 // renderCategoryDetailPane renders a category's name, description, and child/item count.
