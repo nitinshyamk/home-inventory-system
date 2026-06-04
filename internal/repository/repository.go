@@ -227,9 +227,136 @@ func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64, 
 	return &item, nil
 }
 
+// LiftAndDeleteItemType deletes a category and lifts its children to the grandparent:
+//   - Subcategories are re-parented to the grandparent (their depths are decremented recursively).
+//   - Items are moved to the grandparent (allowed because the trigger was dropped in migration 00003).
+//   - If the category is root-level (parentID IS NULL) and has items, returns an error.
+//   - If the category's parent has other children (after re-parenting A's children), moving
+//     items to the parent would violate the structural leaf constraint — the DB INSERT trigger
+//     (enforce_leaf_node_on_insert) would catch that; this is surfaced as an error.
+func (r *Repository) LiftAndDeleteItemType(ctx context.Context, id int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	q := sqlc.New(tx)
+
+	// Load the category to find its parent
+	cat, err := q.GetItemType(ctx, id)
+	if err != nil {
+		return fmt.Errorf("category not found: %w", err)
+	}
+
+	// Check for items in this category
+	itemCount, err := q.CountItemsByType(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to count items: %w", err)
+	}
+
+	// Root + has items → reject
+	if !cat.ParentID.Valid && itemCount > 0 {
+		return fmt.Errorf("cannot delete root category that contains items: move or delete the items first")
+	}
+
+	// Re-parent child categories to grandparent
+	children, err := q.ListChildItemTypes(ctx, sql.NullInt64{Int64: id, Valid: true})
+	if err != nil {
+		return fmt.Errorf("failed to list children: %w", err)
+	}
+
+	if len(children) > 0 {
+		newParent := cat.ParentID
+		newDepth := cat.Depth // children's new depth = category's current depth (one level up)
+		for _, child := range children {
+			if _, err := tx.ExecContext(ctx,
+				`UPDATE item_types SET parent_id = ?, depth = ? WHERE id = ?`,
+				toNullInt64(newParent), newDepth, child.ID,
+			); err != nil {
+				return fmt.Errorf("failed to re-parent child %d: %w", child.ID, err)
+			}
+			// Recursively decrement depths of all descendants
+			descendants, err := r.getDescendantsInTx(ctx, tx, child.ID)
+			if err != nil {
+				return err
+			}
+			for _, desc := range descendants {
+				if _, err := tx.ExecContext(ctx,
+					`UPDATE item_types SET depth = depth - 1 WHERE id = ?`, desc,
+				); err != nil {
+					return fmt.Errorf("failed to update descendant depth %d: %w", desc, err)
+				}
+			}
+		}
+	}
+
+	// Move items to grandparent (only valid when parentID is not null)
+	if itemCount > 0 && cat.ParentID.Valid {
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE items SET item_type_id = ? WHERE item_type_id = ?`,
+			cat.ParentID.Int64, id,
+		); err != nil {
+			return fmt.Errorf("failed to lift items: %w", err)
+		}
+	}
+
+	// Delete the category (now has no children and no items)
+	if _, err := tx.ExecContext(ctx, `DELETE FROM item_types WHERE id = ?`, id); err != nil {
+		return fmt.Errorf("failed to delete category: %w", err)
+	}
+
+	return tx.Commit()
+}
+
+// getDescendantsInTx returns IDs of all descendants of typeID within an existing transaction.
+func (r *Repository) getDescendantsInTx(ctx context.Context, tx interface {
+	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+}, typeID int64) ([]int64, error) {
+	const q = `
+WITH RECURSIVE descendants AS (
+    SELECT id FROM item_types WHERE id = ?
+    UNION ALL
+    SELECT it.id FROM item_types it JOIN descendants d ON it.parent_id = d.id
+)
+SELECT id FROM descendants WHERE id != ?`
+
+	rows, err := tx.QueryContext(ctx, q, typeID, typeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query descendants: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+func toNullInt64(n sql.NullInt64) interface{} {
+	if n.Valid {
+		return n.Int64
+	}
+	return nil
+}
+
 // UpdateItem updates an existing item's name, type, quantity, and unit type.
+// Validates that the target type has no children (structural leaf check) since
+// the enforce_leaf_node_on_update trigger was dropped in migration 00003.
 func (r *Repository) UpdateItem(ctx context.Context, id int64, name string, typeID int64, quantity float64, unitType domain.UnitType) error {
-	err := r.queries.UpdateItem(ctx, sqlc.UpdateItemParams{
+	childCount, err := r.queries.CountChildItemTypes(ctx, sql.NullInt64{Int64: typeID, Valid: true})
+	if err != nil {
+		return fmt.Errorf("failed to check leaf status: %w", err)
+	}
+	if childCount > 0 {
+		return fmt.Errorf("items can only be assigned to leaf nodes")
+	}
+	err = r.queries.UpdateItem(ctx, sqlc.UpdateItemParams{
 		ID:         id,
 		Name:       name,
 		ItemTypeID: typeID,

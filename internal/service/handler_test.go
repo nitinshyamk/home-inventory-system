@@ -262,6 +262,65 @@ func TestHandleListLeafTypesQuery(t *testing.T) {
 	}
 }
 
+func TestHandleDeleteCategoryWithLiftCommand_SubcategoryCase(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	rootResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Root"}).(CreateRootTypeResult)
+	kitchenResult := handler.HandleCommand(ctx, CreateChildTypeCommand{ParentID: rootResult.Type.ID, Name: "Kitchen"}).(CreateChildTypeResult)
+	handler.HandleCommand(ctx, CreateChildTypeCommand{ParentID: kitchenResult.Type.ID, Name: "Pantry"})
+
+	result := handler.HandleCommand(ctx, DeleteCategoryWithLiftCommand{ID: kitchenResult.Type.ID}).(DeleteCategoryWithLiftResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+
+	// Pantry should now be under Root
+	children := handler.HandleQuery(ctx, ListChildTypesQuery{ParentID: rootResult.Type.ID}).(ListChildTypesResult)
+	if len(children.Types) != 1 || children.Types[0].Name != "Pantry" {
+		t.Errorf("expected Pantry under Root, got %+v", children.Types)
+	}
+}
+
+func TestHandleDeleteCategoryWithLiftCommand_ItemCase(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	rootResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Root"}).(CreateRootTypeResult)
+	pantryResult := handler.HandleCommand(ctx, CreateChildTypeCommand{ParentID: rootResult.Type.ID, Name: "Pantry"}).(CreateChildTypeResult)
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Rice", TypeID: pantryResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount})
+
+	result := handler.HandleCommand(ctx, DeleteCategoryWithLiftCommand{ID: pantryResult.Type.ID}).(DeleteCategoryWithLiftResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+
+	// Rice should now be in Root
+	items := handler.HandleQuery(ctx, ListItemsByTypeQuery{TypeID: rootResult.Type.ID}).(ListItemsByTypeResult)
+	if len(items.Items) != 1 || items.Items[0].Name != "Rice" {
+		t.Errorf("expected Rice in Root, got %+v", items.Items)
+	}
+}
+
+func TestHandleDeleteCategoryWithLiftCommand_RootRejection(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	kitchenResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Spoon", TypeID: kitchenResult.Type.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount})
+
+	result := handler.HandleCommand(ctx, DeleteCategoryWithLiftCommand{ID: kitchenResult.Type.ID}).(DeleteCategoryWithLiftResult)
+
+	if result.Err == nil {
+		t.Error("expected error for root category with items")
+	}
+}
+
 func TestHandleGetCategoryChildSummaryQuery(t *testing.T) {
 	handler, cleanup := setupTestHandler(t)
 	defer cleanup()

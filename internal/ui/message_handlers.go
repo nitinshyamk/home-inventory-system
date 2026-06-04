@@ -405,15 +405,14 @@ func handleDeleteCategoryConfirmKey(m Model, msg tea.Msg) (Model, tea.Cmd) {
 	return m, nil
 }
 
-// deleteCategorySimple uses the existing DeleteItemTypeCommand (no lift).
-// For Task 7, this handles the empty category case. Lift is added in Task 8.
+// deleteCategoryWithLift uses DeleteCategoryWithLiftCommand which handles subcategory/item lifting.
 func deleteCategorySimple(handler *service.Handler, id int64, summary *deleteCategorySummary) tea.Cmd {
 	return func() tea.Msg {
 		var parentID *int64
 		if summary != nil {
 			parentID = summary.parentID
 		}
-		result, ok := handler.HandleCommand(context.Background(), service.DeleteItemTypeCommand{ID: id}).(service.DeleteItemTypeResult)
+		result, ok := handler.HandleCommand(context.Background(), service.DeleteCategoryWithLiftCommand{ID: id}).(service.DeleteCategoryWithLiftResult)
 		if !ok {
 			return messages.CategoryDeletedMsg{Err: fmt.Errorf("unexpected result type")}
 		}

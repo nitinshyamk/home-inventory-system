@@ -66,6 +66,8 @@ func (h *Handler) HandleCommand(ctx context.Context, c Command) CommandResult {
 		return h.handleDeleteItem(ctx, cmd)
 	case DeleteItemTypeCommand:
 		return h.handleDeleteItemType(ctx, cmd)
+	case DeleteCategoryWithLiftCommand:
+		return h.handleDeleteCategoryWithLift(ctx, cmd)
 	default:
 		return nil
 	}
@@ -218,6 +220,13 @@ func (h *Handler) handleUpdateCategory(ctx context.Context, cmd UpdateCategoryCo
 func (h *Handler) handleDeleteItem(ctx context.Context, cmd DeleteItemCommand) DeleteItemResult {
 	err := h.repo.DeleteItem(ctx, cmd.ID)
 	return DeleteItemResult{Err: err}
+}
+
+func (h *Handler) handleDeleteCategoryWithLift(ctx context.Context, cmd DeleteCategoryWithLiftCommand) DeleteCategoryWithLiftResult {
+	if err := h.repo.LiftAndDeleteItemType(ctx, cmd.ID); err != nil {
+		return DeleteCategoryWithLiftResult{Err: err}
+	}
+	return DeleteCategoryWithLiftResult{}
 }
 
 func (h *Handler) handleDeleteItemType(ctx context.Context, cmd DeleteItemTypeCommand) DeleteItemTypeResult {

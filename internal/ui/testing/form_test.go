@@ -337,6 +337,67 @@ func TestDeleteCategory_RootWithItemsRejection(t *testing.T) {
 	sim.AssertListContains(t, "RootWithItems")
 }
 
+func TestDeleteCategory_WithSubcategories_Success(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	rootResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Root"}).(service.CreateRootTypeResult)
+	kitchenResult := sim.handler.HandleCommand(ctx, service.CreateChildTypeCommand{ParentID: rootResult.Type.ID, Name: "Kitchen"}).(service.CreateChildTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateChildTypeCommand{ParentID: kitchenResult.Type.ID, Name: "Pantry"})
+	sim.Reload()
+
+	// Navigate into Root
+	sim.SendKeys(KeyEnter)
+
+	// Kitchen should now be visible. Press 'd' to delete it.
+	sim.AssertListContains(t, "Kitchen")
+	sim.SendKeys(Type("d"))
+	sim.AssertState(t, ui.StateDeletingCategory)
+
+	// Confirm deletion
+	sim.SendKeys(KeyEnter)
+
+	// Pantry should now appear directly under Root
+	sim.AssertState(t, ui.StateBrowsingTypes)
+	sim.AssertListContains(t, "Pantry")
+	sim.AssertListNotContains(t, "Kitchen")
+	sim.AssertNoError(t)
+}
+
+func TestDeleteCategory_WithItems_Success(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	rootResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Root"}).(service.CreateRootTypeResult)
+	pantryResult := sim.handler.HandleCommand(ctx, service.CreateChildTypeCommand{ParentID: rootResult.Type.ID, Name: "Pantry"}).(service.CreateChildTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Rice", TypeID: pantryResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	// Navigate into Root
+	sim.SendKeys(KeyEnter)
+
+	sim.AssertListContains(t, "Pantry")
+	sim.SendKeys(Type("d"))
+	sim.AssertState(t, ui.StateDeletingCategory)
+
+	sim.SendKeys(KeyEnter) // Confirm
+
+	// Root is now a leaf with Rice
+	sim.AssertState(t, ui.StateBrowsingTypes)
+	sim.AssertListNotContains(t, "Pantry")
+	sim.AssertNoError(t)
+
+	// Verify Rice moved to Root
+	rootItems := sim.handler.HandleQuery(ctx, service.ListItemsByTypeQuery{TypeID: rootResult.Type.ID}).(service.ListItemsByTypeResult)
+	if len(rootItems.Items) != 1 || rootItems.Items[0].Name != "Rice" {
+		t.Errorf("expected Rice in Root, got %+v", rootItems.Items)
+	}
+}
+
 func TestDeleteItem_Confirm(t *testing.T) {
 	sim := NewSimulator(t)
 	defer sim.Cleanup()

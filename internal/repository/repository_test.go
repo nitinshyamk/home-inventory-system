@@ -456,6 +456,105 @@ func TestListItemsByType(t *testing.T) {
 	}
 }
 
+func TestLiftAndDeleteCategory_SubcategoryLift(t *testing.T) {
+	repo, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Root > Kitchen > Pantry, Appliances
+	root, _ := repo.CreateRootType(ctx, "Root", "")
+	kitchen, _ := repo.CreateChildType(ctx, root.ID, "Kitchen", "")
+	pantry, _ := repo.CreateChildType(ctx, kitchen.ID, "Pantry", "")
+	_, _ = repo.CreateChildType(ctx, kitchen.ID, "Appliances", "")
+
+	if err := repo.LiftAndDeleteItemType(ctx, kitchen.ID); err != nil {
+		t.Fatalf("lift-and-delete failed: %v", err)
+	}
+
+	// Pantry and Appliances should now be direct children of Root
+	children, err := repo.GetChildTypes(ctx, root.ID)
+	if err != nil {
+		t.Fatalf("failed to get children: %v", err)
+	}
+	if len(children) != 2 {
+		t.Errorf("expected 2 children of Root, got %d", len(children))
+	}
+
+	// Pantry's depth should be 1 (was 2)
+	pantryUpdated, _ := repo.GetItemType(ctx, pantry.ID)
+	if pantryUpdated.Depth != 1 {
+		t.Errorf("expected Pantry depth=1, got %d", pantryUpdated.Depth)
+	}
+}
+
+func TestLiftAndDeleteCategory_ItemLift(t *testing.T) {
+	repo, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Root > Pantry (leaf with items)
+	root, _ := repo.CreateRootType(ctx, "Root", "")
+	pantry, _ := repo.CreateChildType(ctx, root.ID, "Pantry", "")
+	_, _ = repo.CreateItem(ctx, "Rice", pantry.ID, 1.0, domain.UnitTypeCount)
+
+	if err := repo.LiftAndDeleteItemType(ctx, pantry.ID); err != nil {
+		t.Fatalf("lift-and-delete failed: %v", err)
+	}
+
+	// Rice should now be in Root
+	items, err := repo.ListItemsByType(ctx, root.ID)
+	if err != nil {
+		t.Fatalf("failed to list items: %v", err)
+	}
+	if len(items) != 1 || items[0].Name != "Rice" {
+		t.Errorf("expected Rice in Root, got %+v", items)
+	}
+}
+
+func TestLiftAndDeleteCategory_RootWithItemsRejected(t *testing.T) {
+	repo, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	kitchen, _ := repo.CreateRootType(ctx, "Kitchen", "")
+	_, _ = repo.CreateItem(ctx, "Spoon", kitchen.ID, 1.0, domain.UnitTypeCount)
+
+	err := repo.LiftAndDeleteItemType(ctx, kitchen.ID)
+	if err == nil {
+		t.Error("expected error for root category with items")
+	}
+}
+
+func TestLiftAndDeleteCategory_DepthsCorrectAfterLift(t *testing.T) {
+	repo, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// A > B > C > D (3 levels deep)
+	a, _ := repo.CreateRootType(ctx, "A", "")
+	b, _ := repo.CreateChildType(ctx, a.ID, "B", "")
+	c, _ := repo.CreateChildType(ctx, b.ID, "C", "")
+	d, _ := repo.CreateChildType(ctx, c.ID, "D", "")
+
+	// Delete B — C and D should be lifted to A
+	if err := repo.LiftAndDeleteItemType(ctx, b.ID); err != nil {
+		t.Fatalf("lift-and-delete failed: %v", err)
+	}
+
+	cUpdated, _ := repo.GetItemType(ctx, c.ID)
+	dUpdated, _ := repo.GetItemType(ctx, d.ID)
+
+	if cUpdated.Depth != 1 {
+		t.Errorf("expected C depth=1, got %d", cUpdated.Depth)
+	}
+	if dUpdated.Depth != 2 {
+		t.Errorf("expected D depth=2, got %d", dUpdated.Depth)
+	}
+}
+
 func TestUpdateItem(t *testing.T) {
 	repo, cleanup := setupTestDB(t)
 	defer cleanup()

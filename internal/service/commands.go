@@ -251,6 +251,21 @@ type DeleteItemTypeCommand struct {
 
 func (DeleteItemTypeCommand) isCommand() {}
 
+// DeleteCategoryWithLiftCommand deletes a category and lifts its children to the grandparent.
+type DeleteCategoryWithLiftCommand struct {
+	ID int64
+}
+
+func (DeleteCategoryWithLiftCommand) isCommand() {}
+
+// DeleteCategoryWithLiftResult contains the result
+type DeleteCategoryWithLiftResult struct {
+	ValidationError *ValidationError
+	Err             error
+}
+
+func (DeleteCategoryWithLiftResult) isCommandResult() {}
+
 // --- Command Results ---
 
 // CommandResult represents the result of a command operation
