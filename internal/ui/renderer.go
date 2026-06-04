@@ -22,7 +22,7 @@ func renderView(m Model) string {
 	switch m.state {
 	case StateLoading:
 		return renderLoading()
-	case StateBrowsingTypes, StateViewingItems, StateEditingCategory, StateEditingItem:
+	case StateBrowsingTypes, StateViewingItems, StateEditingCategory, StateEditingItem, StatePickingCategory:
 		return renderMainView(m)
 	case StateCreatingCategory, StateCreatingItem:
 		return renderFormOverlay(m)
@@ -88,6 +88,8 @@ func renderRightPaneForModel(m Model) string {
 		return m.categoryEditForm.View()
 	case StateEditingItem:
 		return m.itemEditForm.View()
+	case StatePickingCategory:
+		return m.categoryPicker.View()
 	}
 	return renderRightPane(m.rightPane)
 }

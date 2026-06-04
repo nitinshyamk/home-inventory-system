@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"home-inventory-system/internal/domain"
 	"home-inventory-system/internal/service"
 	"home-inventory-system/internal/ui/messages"
 )
@@ -68,6 +69,33 @@ func loadBreadcrumb(handler *service.Handler, typeID int64) tea.Cmd {
 			}
 		}
 		return messages.ErrorMsg{Err: fmt.Errorf("unexpected query result type")}
+	}
+}
+
+// loadLeafTypesWithPaths fetches all leaf categories and their full ancestor paths.
+// Used to populate the category picker.
+func loadLeafTypesWithPaths(handler *service.Handler) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		leafResult, ok := handler.HandleQuery(ctx, service.ListLeafTypesQuery{}).(service.ListLeafTypesResult)
+		if !ok || leafResult.Err != nil {
+			return messages.LeafTypesWithPathsLoadedMsg{Err: leafResult.Err}
+		}
+
+		paths := make(map[int64][]domain.ItemType, len(leafResult.Types))
+		for _, t := range leafResult.Types {
+			pathResult, ok := handler.HandleQuery(ctx, service.GetTypePathQuery{TypeID: t.ID}).(service.GetTypePathResult)
+			if !ok || pathResult.Err != nil {
+				continue // skip on error
+			}
+			paths[t.ID] = pathResult.Path
+		}
+
+		return messages.LeafTypesWithPathsLoadedMsg{
+			LeafTypes: leafResult.Types,
+			Paths:     paths,
+		}
 	}
 }
 

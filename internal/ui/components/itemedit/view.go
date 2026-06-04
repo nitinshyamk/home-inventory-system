@@ -44,6 +44,21 @@ func (m Model) View() string {
 	b.WriteString(unitLabel + "  " + unitStr)
 	b.WriteString("\n\n")
 
+	// Category row
+	catLabel := renderLabel("Category", m.focusIndex == FocusChangeCategory)
+	catPath := m.currentTypePath
+	if catPath == "" {
+		catPath = "(unchanged)"
+	}
+	var changeBtn string
+	if m.focusIndex == FocusChangeCategory {
+		changeBtn = focusedLabel.Render("[ Change... ]")
+	} else {
+		changeBtn = dimButton.Render("[ Change... ]")
+	}
+	b.WriteString(catLabel + "  " + normalLabel.Render(catPath) + "  " + changeBtn)
+	b.WriteString("\n\n")
+
 	// Inline error
 	if m.errorMsg != "" {
 		b.WriteString(styles.ErrorStyle.Render(m.errorMsg))

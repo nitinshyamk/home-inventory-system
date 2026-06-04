@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"home-inventory-system/internal/service"
+	"home-inventory-system/internal/ui/components/categorypicker"
 	"home-inventory-system/internal/ui/components/itemedit"
 	"home-inventory-system/internal/ui/formcontroller"
 	"home-inventory-system/internal/ui/messages"
@@ -251,6 +252,11 @@ func delegateToItemEditForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.itemEditForm, cmd = m.itemEditForm.Update(msg)
 
+	if m.itemEditForm.ChangingCategory() {
+		m.itemEditForm.ClearChangingCategory()
+		m = transitionTo(m, StatePickingCategory)
+		return m, loadLeafTypesWithPaths(m.handler)
+	}
 	if m.itemEditForm.Submitted() {
 		return m, submitItemEdit(m.handler, m.rightPane.item.ID, m.itemEditForm)
 	}
@@ -258,6 +264,36 @@ func delegateToItemEditForm(m Model, msg tea.Msg) (Model, tea.Cmd) {
 		m = transitionTo(m, StateViewingItems)
 	}
 	return m, cmd
+}
+
+// delegateToCategoryPicker passes key events to the inline category picker.
+func delegateToCategoryPicker(m Model, msg tea.Msg) (Model, tea.Cmd) {
+	var cmd tea.Cmd
+	m.categoryPicker, cmd = m.categoryPicker.Update(msg)
+
+	if entry := m.categoryPicker.Selected(); entry != nil {
+		// Apply selection to item edit form
+		m.itemEditForm.SetCurrentType(entry.TypeID)
+		m.itemEditForm.SetCategoryPath(entry.FullPath)
+		m = transitionTo(m, StateEditingItem)
+		return m, cmd
+	}
+	if m.categoryPicker.Cancelled() {
+		m = transitionTo(m, StateEditingItem)
+	}
+	return m, cmd
+}
+
+// handleLeafTypesWithPathsLoaded creates the category picker from loaded data.
+func handleLeafTypesWithPathsLoaded(m Model, msg messages.LeafTypesWithPathsLoadedMsg) (Model, tea.Cmd) {
+	if msg.Err != nil {
+		// Non-fatal: go back to item edit
+		m = transitionTo(m, StateEditingItem)
+		return m, nil
+	}
+	entries := categorypicker.BuildEntries(msg.LeafTypes, msg.Paths)
+	m.categoryPicker = categorypicker.New(entries)
+	return m, nil
 }
 
 // submitItemEdit sends an UpdateItemCommand and emits ItemUpdatedMsg.

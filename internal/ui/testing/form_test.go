@@ -262,16 +262,15 @@ func TestEditItem_SaveChanges(t *testing.T) {
 	})
 	sim.Reload()
 
-	// Navigate into Pantry (first item is Pantry category)
-	sim.SendKeys(KeyEnter)
+	sim.SendKeys(KeyEnter) // navigate into Pantry
 
-	// Now in items view, press 'e' to edit
 	sim.SendKeys(Type("e"))
 	sim.AssertState(t, ui.StateEditingItem)
 
-	// Append to name
-	sim.SendKeys(Type(" Bag"))  // "Rice Bag"
-	sim.SendKeys(KeyTab, KeyTab, KeyTab) // Tab past Qty, Unit to Save
+	// Append to name field (cursor is at end of "Rice" after SetValue)
+	sim.SendKeys(Type(" Bag")) // "Rice Bag"
+	// Tab past Qty(1), Unit(2), ChangeCategory(3) to Save(4)
+	sim.SendKeys(KeyTab, KeyTab, KeyTab, KeyTab)
 	sim.SendKeys(KeyEnter)
 
 	sim.AssertState(t, ui.StateViewingItems)
@@ -314,11 +313,11 @@ func TestEditItem_UnitTypeSelection(t *testing.T) {
 	sim.SendKeys(KeyEnter) // into Pantry
 	sim.SendKeys(Type("e"))
 
-	// Tab to Unit selector and cycle to "Liters"
-	sim.SendKeys(KeyTab, KeyTab) // past Name, Qty to Unit
+	// Tab to Unit selector: Name(0)→Qty(1)→Unit(2) = 2 Tabs
+	sim.SendKeys(KeyTab, KeyTab)
 	sim.SendKeys(KeyDown, KeyDown) // Count → Grams → Liters
-	// Tab to Save and submit
-	sim.SendKeys(KeyTab, KeyEnter)
+	// Tab to Save: Unit(2)→ChangeCategory(3)→Save(4) = 2 Tabs
+	sim.SendKeys(KeyTab, KeyTab, KeyEnter)
 
 	sim.AssertState(t, ui.StateViewingItems)
 	items := sim.handler.HandleQuery(ctx, service.ListItemsByTypeQuery{TypeID: catResult.Type.ID}).(service.ListItemsByTypeResult)
@@ -342,10 +341,96 @@ func TestEditItem_DisabledSaveWhenUnchanged(t *testing.T) {
 	sim.SendKeys(Type("e"))
 	sim.AssertState(t, ui.StateEditingItem)
 
-	// Tab to Save without any changes
-	sim.SendKeys(KeyTab, KeyTab, KeyTab, KeyEnter)
+	// Tab to Save without any changes: Name(0)→Qty(1)→Unit(2)→ChangeCategory(3)→Save(4) = 4 Tabs
+	sim.SendKeys(KeyTab, KeyTab, KeyTab, KeyTab, KeyEnter)
 	// Save is disabled when unchanged
 	sim.AssertState(t, ui.StateEditingItem)
+}
+
+func TestEditItem_ChangeCategoryViaInlinePicker(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	// Freezer (F) comes before Pantry (P) alphabetically.
+	// Peas live in Pantry; we'll move them to Freezer via the picker.
+	pantryResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	freezerResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Freezer"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Peas", TypeID: pantryResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	// Alphabetical list: Freezer(0), Pantry(1). Navigate Down to Pantry, then Enter.
+	sim.SendKeys(KeyDown)  // move to Pantry
+	sim.SendKeys(KeyEnter) // drill into Pantry
+	sim.SendKeys(Type("e"))
+	sim.AssertState(t, ui.StateEditingItem)
+
+	// Tab to Change Category: Name(0)→Qty(1)→Unit(2)→ChangeCategory(3) = 3 Tabs
+	sim.SendKeys(KeyTab, KeyTab, KeyTab)
+	sim.SendKeys(KeyEnter) // open picker
+	sim.AssertState(t, ui.StatePickingCategory)
+
+	// Picker shows [Freezer(0), Pantry(1)] alphabetically.
+	// Cursor starts at 0 (Freezer). Just press Enter to select Freezer.
+	sim.SendKeys(KeyEnter)
+	sim.AssertState(t, ui.StateEditingItem)
+
+	// Tab to Save: focusChangeCategory(3)→Save(4), then Enter
+	sim.SendKeys(KeyTab, KeyEnter)
+
+	// Verify item moved to Freezer
+	sim.AssertState(t, ui.StateViewingItems)
+	freezerItems := sim.handler.HandleQuery(ctx, service.ListItemsByTypeQuery{TypeID: freezerResult.Type.ID}).(service.ListItemsByTypeResult)
+	if len(freezerItems.Items) != 1 || freezerItems.Items[0].Name != "Peas" {
+		t.Errorf("expected Peas in Freezer, got %+v", freezerItems.Items)
+	}
+}
+
+func TestEditItem_ChangeCategoryCancel(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	pantryResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Rice", TypeID: pantryResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	sim.SendKeys(KeyEnter)         // navigate into Pantry
+	sim.SendKeys(Type("e"))        // open edit form
+	// Tab to ChangeCategory(3) = 3 Tabs, then Enter to open picker
+	sim.SendKeys(KeyTab, KeyTab, KeyTab, KeyEnter)
+	sim.AssertState(t, ui.StatePickingCategory)
+
+	sim.SendKeys(KeyEsc) // cancel
+	sim.AssertState(t, ui.StateEditingItem)
+}
+
+func TestHandleUpdateItemCommand_ChangesCategory(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	pantryResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	freezerResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Freezer"}).(service.CreateRootTypeResult)
+	itemResult := sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Peas", TypeID: pantryResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	}).(service.CreateItemResult)
+
+	result := sim.handler.HandleCommand(ctx, service.UpdateItemCommand{
+		ID: itemResult.Item.ID, Name: "Peas", TypeID: freezerResult.Type.ID,
+		Quantity: 1.0, UnitType: "Count",
+	}).(service.UpdateItemResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if result.Item.ItemTypeID != freezerResult.Type.ID {
+		t.Errorf("expected item in Freezer (id=%d), got typeID=%d", freezerResult.Type.ID, result.Item.ItemTypeID)
+	}
 }
 
 func TestEditCategory_SaveChanges(t *testing.T) {

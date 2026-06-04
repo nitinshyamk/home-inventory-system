@@ -66,6 +66,13 @@ type CategoryUpdatedMsg struct {
 	Err      error
 }
 
+// LeafTypesWithPathsLoadedMsg carries leaf types and their ancestor paths for the category picker.
+type LeafTypesWithPathsLoadedMsg struct {
+	LeafTypes []domain.ItemType
+	Paths     map[int64][]domain.ItemType // typeID → path from root to that type
+	Err       error
+}
+
 // RightPaneDetailMsg carries loaded count data for the right pane category detail.
 type RightPaneDetailMsg struct {
 	CategoryID int64

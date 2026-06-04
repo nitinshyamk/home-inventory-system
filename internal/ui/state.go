@@ -13,6 +13,7 @@ const (
 	StateCreatingItem              // Creating a new item via form
 	StateEditingCategory           // Editing an existing category via right-pane form
 	StateEditingItem               // Editing an existing item via right-pane form
+	StatePickingCategory           // Inline leaf category picker (nested within item edit)
 	StateError
 )
 
@@ -33,6 +34,8 @@ func (s AppState) String() string {
 		return "EditingCategory"
 	case StateEditingItem:
 		return "EditingItem"
+	case StatePickingCategory:
+		return "PickingCategory"
 	case StateError:
 		return "Error"
 	default:

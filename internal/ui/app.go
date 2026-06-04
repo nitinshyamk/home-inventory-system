@@ -7,6 +7,7 @@ import (
 	"home-inventory-system/internal/service"
 	"home-inventory-system/internal/ui/components/categoryedit"
 	"home-inventory-system/internal/ui/components/categoryform"
+	"home-inventory-system/internal/ui/components/categorypicker"
 	"home-inventory-system/internal/ui/components/itemedit"
 	"home-inventory-system/internal/ui/components/itemform"
 	"home-inventory-system/internal/ui/components/itemlist"
@@ -34,6 +35,7 @@ type Model struct {
 	categoryForm     categoryform.Model
 	categoryEditForm categoryedit.Model
 	itemEditForm     itemedit.Model
+	categoryPicker   categorypicker.Model
 	itemForm         itemform.Model
 	formController   *formcontroller.Controller
 	handler          *service.Handler
@@ -105,6 +107,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.ItemUpdatedMsg:
 		return handleItemUpdated(m, msg)
+
+	case messages.LeafTypesWithPathsLoadedMsg:
+		return handleLeafTypesWithPathsLoaded(m, msg)
 	}
 
 	// Pass messages to item list when in browsing state
@@ -128,6 +133,12 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		return delegateToItemEditForm(m, msg)
+	}
+	if m.state == StatePickingCategory {
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+		return delegateToCategoryPicker(m, msg)
 	}
 
 	// When in modal form state, delegate all keys to the form (except ctrl+c)
