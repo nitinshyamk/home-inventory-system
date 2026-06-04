@@ -251,6 +251,56 @@ func TestFormNavigationWithTab(t *testing.T) {
 	sim.AssertCategoryExists(t, "Kitchen", "Description")
 }
 
+func TestDeleteItem_Confirm(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	catResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Rice", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	sim.SendKeys(KeyEnter) // navigate into Pantry
+	sim.AssertState(t, ui.StateViewingItems)
+	sim.AssertListContains(t, "Rice")
+
+	// Press 'd' to open delete confirmation
+	sim.SendKeys(Type("d"))
+	sim.AssertState(t, ui.StateDeletingItem)
+
+	// Focus starts at Confirm (0). Press Enter to confirm.
+	sim.SendKeys(KeyEnter)
+
+	sim.AssertState(t, ui.StateViewingItems)
+	sim.AssertListNotContains(t, "Rice")
+	sim.AssertNoError(t)
+}
+
+func TestDeleteItem_Cancel(t *testing.T) {
+	sim := NewSimulator(t)
+	defer sim.Cleanup()
+
+	ctx := context.Background()
+	catResult := sim.handler.HandleCommand(ctx, service.CreateRootTypeCommand{Name: "Pantry"}).(service.CreateRootTypeResult)
+	sim.handler.HandleCommand(ctx, service.CreateItemCommand{
+		Name: "Rice", TypeID: catResult.Type.ID, Quantity: 1.0, UnitType: "Count",
+	})
+	sim.Reload()
+
+	sim.SendKeys(KeyEnter)
+	sim.SendKeys(Type("d"))
+	sim.AssertState(t, ui.StateDeletingItem)
+
+	// Tab to Cancel and press Enter
+	sim.SendKeys(KeyTab, KeyEnter)
+
+	sim.AssertState(t, ui.StateViewingItems)
+	sim.AssertListContains(t, "Rice") // still there
+	sim.AssertNoError(t)
+}
+
 func TestEditItem_SaveChanges(t *testing.T) {
 	sim := NewSimulator(t)
 	defer sim.Cleanup()

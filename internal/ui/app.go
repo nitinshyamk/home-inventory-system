@@ -30,13 +30,14 @@ type rightPaneContent struct {
 
 // Model is the main application model
 type Model struct {
-	state            AppState
-	itemList         itemlist.Model
-	categoryForm     categoryform.Model
-	categoryEditForm categoryedit.Model
-	itemEditForm     itemedit.Model
-	categoryPicker   categorypicker.Model
-	itemForm         itemform.Model
+	state              AppState
+	itemList           itemlist.Model
+	categoryForm       categoryform.Model
+	categoryEditForm   categoryedit.Model
+	itemEditForm       itemedit.Model
+	categoryPicker     categorypicker.Model
+	itemForm           itemform.Model
+	deleteConfirmFocus int // 0=Confirm, 1=Cancel (for delete confirmation dialogs)
 	formController   *formcontroller.Controller
 	handler          *service.Handler
 	err              error
@@ -110,6 +111,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case messages.LeafTypesWithPathsLoadedMsg:
 		return handleLeafTypesWithPathsLoaded(m, msg)
+
+	case messages.ItemDeletedMsg:
+		return handleItemDeleted(m, msg)
 	}
 
 	// Pass messages to item list when in browsing state
@@ -140,6 +144,12 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return delegateToCategoryPicker(m, msg)
 	}
+	if m.state == StateDeletingItem {
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+		return handleDeleteItemConfirmKey(m, msg)
+	}
 
 	// When in modal form state, delegate all keys to the form (except ctrl+c)
 	if m.state == StateCreatingCategory {
@@ -168,6 +178,9 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "e":
 		return openEditForm(m)
+
+	case "d":
+		return openDeleteConfirm(m)
 	}
 
 	// Pass to itemlist for navigation; also refreshes right pane detail

@@ -14,6 +14,7 @@ const (
 	StateEditingCategory           // Editing an existing category via right-pane form
 	StateEditingItem               // Editing an existing item via right-pane form
 	StatePickingCategory           // Inline leaf category picker (nested within item edit)
+	StateDeletingItem              // Delete confirmation for an item (right pane)
 	StateError
 )
 
@@ -36,6 +37,8 @@ func (s AppState) String() string {
 		return "EditingItem"
 	case StatePickingCategory:
 		return "PickingCategory"
+	case StateDeletingItem:
+		return "DeletingItem"
 	case StateError:
 		return "Error"
 	default:

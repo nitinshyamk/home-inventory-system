@@ -130,6 +130,16 @@ func openItemEditForm(m Model) (Model, tea.Cmd) {
 	return m, nil
 }
 
+// openDeleteConfirm opens the delete confirmation view for the highlighted item or category.
+func openDeleteConfirm(m Model) (Model, tea.Cmd) {
+	if m.rightPane.item != nil && m.state == StateViewingItems {
+		m.deleteConfirmFocus = 0 // start focused on Confirm
+		m = transitionTo(m, StateDeletingItem)
+		return m, nil
+	}
+	return m, nil
+}
+
 // openCategoryEditForm opens the category edit form in the right pane.
 func openCategoryEditForm(m Model) (Model, tea.Cmd) {
 	cat := m.rightPane.category

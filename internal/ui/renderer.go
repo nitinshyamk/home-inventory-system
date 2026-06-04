@@ -22,7 +22,7 @@ func renderView(m Model) string {
 	switch m.state {
 	case StateLoading:
 		return renderLoading()
-	case StateBrowsingTypes, StateViewingItems, StateEditingCategory, StateEditingItem, StatePickingCategory:
+	case StateBrowsingTypes, StateViewingItems, StateEditingCategory, StateEditingItem, StatePickingCategory, StateDeletingItem:
 		return renderMainView(m)
 	case StateCreatingCategory, StateCreatingItem:
 		return renderFormOverlay(m)
@@ -90,6 +90,8 @@ func renderRightPaneForModel(m Model) string {
 		return m.itemEditForm.View()
 	case StatePickingCategory:
 		return m.categoryPicker.View()
+	case StateDeletingItem:
+		return renderItemDeleteConfirm(m)
 	}
 	return renderRightPane(m.rightPane)
 }
@@ -103,6 +105,36 @@ func renderRightPane(p rightPaneContent) string {
 		return renderCategoryDetailPane(p)
 	}
 	return styles.DimStyle.Render("Select an item to see details")
+}
+
+// renderItemDeleteConfirm renders the item delete confirmation in the right pane.
+func renderItemDeleteConfirm(m Model) string {
+	if m.rightPane.item == nil {
+		return renderRightPane(m.rightPane)
+	}
+	item := m.rightPane.item
+	var b strings.Builder
+	b.WriteString(styles.TitleStyle.Render("Delete Item"))
+	b.WriteString("\n\n")
+	b.WriteString(styles.NormalStyle.Render(fmt.Sprintf("Delete %q?", item.Name)))
+	b.WriteString("\n\n")
+	b.WriteString(styles.DimStyle.Render("This action cannot be undone."))
+	b.WriteString("\n\n")
+	b.WriteString(renderConfirmButtons(m.deleteConfirmFocus))
+	return b.String()
+}
+
+// renderConfirmButtons renders [ Confirm Delete ] / [ Cancel ] with focus indicator.
+func renderConfirmButtons(focusIndex int) string {
+	confirmStyle := styles.NormalStyle
+	cancelStyle := styles.NormalStyle
+	focused := styles.SelectedStyle
+	if focusIndex == 0 {
+		confirmStyle = focused
+	} else {
+		cancelStyle = focused
+	}
+	return confirmStyle.Render("[ Confirm Delete ]") + "   " + cancelStyle.Render("[ Cancel ]")
 }
 
 // renderCategoryDetailPane renders a category's name, description, and child/item count.

@@ -54,6 +54,13 @@ type ItemCreatedMsg struct {
 	Err  error
 }
 
+// ItemDeletedMsg is sent when an item is successfully deleted
+type ItemDeletedMsg struct {
+	DeletedID int64
+	TypeID    int64
+	Err       error
+}
+
 // ItemUpdatedMsg is sent when an item is successfully updated
 type ItemUpdatedMsg struct {
 	Item *domain.Item

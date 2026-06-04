@@ -329,6 +329,51 @@ func handleItemUpdated(m Model, msg messages.ItemUpdatedMsg) (Model, tea.Cmd) {
 	return m, loadItemsForType(m.handler, *m.currentTypeID)
 }
 
+// handleDeleteItemConfirmKey handles key events in the item delete confirmation state.
+func handleDeleteItemConfirmKey(m Model, msg tea.Msg) (Model, tea.Cmd) {
+	keyMsg, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return m, nil
+	}
+	switch keyMsg.String() {
+	case "esc":
+		m = transitionTo(m, StateViewingItems)
+	case "tab", "shift+tab":
+		m.deleteConfirmFocus = 1 - m.deleteConfirmFocus // toggle 0↔1
+	case "enter":
+		if m.deleteConfirmFocus == 0 { // Confirm
+			item := m.rightPane.item
+			return m, deleteItem(m.handler, item.ID, item.ItemTypeID)
+		}
+		m = transitionTo(m, StateViewingItems)
+	}
+	return m, nil
+}
+
+// deleteItem sends a DeleteItemCommand and emits ItemDeletedMsg.
+func deleteItem(handler *service.Handler, id int64, typeID int64) tea.Cmd {
+	return func() tea.Msg {
+		result, ok := handler.HandleCommand(context.Background(), service.DeleteItemCommand{ID: id}).(service.DeleteItemResult)
+		if !ok {
+			return messages.ItemDeletedMsg{Err: fmt.Errorf("unexpected result type")}
+		}
+		return messages.ItemDeletedMsg{DeletedID: id, TypeID: typeID, Err: result.Err}
+	}
+}
+
+// handleItemDeleted processes the result of an item delete.
+func handleItemDeleted(m Model, msg messages.ItemDeletedMsg) (Model, tea.Cmd) {
+	if msg.Err != nil {
+		return setError(m, msg.Err)
+	}
+	m = transitionTo(m, StateViewingItems)
+	m.rightPane = rightPaneContent{} // clear right pane
+	if m.currentTypeID == nil {
+		return m, nil
+	}
+	return m, loadItemsForType(m.handler, *m.currentTypeID)
+}
+
 // handleRightPaneDetail updates the right pane with loaded category count data.
 func handleRightPaneDetail(m Model, msg messages.RightPaneDetailMsg) (Model, tea.Cmd) {
 	if msg.Err != nil {
