@@ -516,3 +516,194 @@ func TestSeedIntegration(t *testing.T) {
 		t.Errorf("expected at least 30 items, got %d", totalItems)
 	}
 }
+
+// --- Location tests ---
+
+func TestHandleCreateRootLocationCommand(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	result := handler.HandleCommand(ctx, CreateRootLocationCommand{
+		Name:        "House",
+		Description: "My home",
+	}).(CreateRootLocationResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if result.Location == nil {
+		t.Fatal("expected non-nil location")
+	}
+	if result.Location.Name != "House" {
+		t.Errorf("expected name 'House', got '%s'", result.Location.Name)
+	}
+	if result.Location.Depth != 0 {
+		t.Errorf("expected depth 0, got %d", result.Location.Depth)
+	}
+	if result.Location.ParentID != nil {
+		t.Error("expected nil parent_id for root location")
+	}
+}
+
+func TestHandleCreateRootLocationCommand_EmptyName(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	result := handler.HandleCommand(ctx, CreateRootLocationCommand{Name: ""}).(CreateRootLocationResult)
+
+	if result.ValidationError == nil {
+		t.Error("expected validation error for empty name")
+	}
+	if result.Location != nil {
+		t.Error("expected nil location on validation error")
+	}
+}
+
+func TestHandleCreateChildLocationCommand(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	rootResult := handler.HandleCommand(ctx, CreateRootLocationCommand{Name: "House"}).(CreateRootLocationResult)
+	if rootResult.Err != nil {
+		t.Fatalf("failed to create root location: %v", rootResult.Err)
+	}
+
+	childResult := handler.HandleCommand(ctx, CreateChildLocationCommand{
+		ParentID: rootResult.Location.ID,
+		Name:     "Bedroom",
+	}).(CreateChildLocationResult)
+
+	if childResult.Err != nil {
+		t.Fatalf("unexpected error: %v", childResult.Err)
+	}
+	if childResult.Location.Depth != 1 {
+		t.Errorf("expected depth 1, got %d", childResult.Location.Depth)
+	}
+	if childResult.Location.ParentID == nil || *childResult.Location.ParentID != rootResult.Location.ID {
+		t.Errorf("expected parent_id %d", rootResult.Location.ID)
+	}
+}
+
+func TestHandleListChildLocationsQuery(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	rootResult := handler.HandleCommand(ctx, CreateRootLocationCommand{Name: "House"}).(CreateRootLocationResult)
+	handler.HandleCommand(ctx, CreateChildLocationCommand{ParentID: rootResult.Location.ID, Name: "Bedroom"})
+	handler.HandleCommand(ctx, CreateChildLocationCommand{ParentID: rootResult.Location.ID, Name: "Kitchen"})
+
+	result := handler.HandleQuery(ctx, ListChildLocationsQuery{ParentID: rootResult.Location.ID}).(ListChildLocationsResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if len(result.Locations) != 2 {
+		t.Errorf("expected 2 child locations, got %d", len(result.Locations))
+	}
+}
+
+func TestHandleGetLocationPathQuery(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	house := handler.HandleCommand(ctx, CreateRootLocationCommand{Name: "House"}).(CreateRootLocationResult).Location
+	bedroom := handler.HandleCommand(ctx, CreateChildLocationCommand{ParentID: house.ID, Name: "Bedroom"}).(CreateChildLocationResult).Location
+	closet := handler.HandleCommand(ctx, CreateChildLocationCommand{ParentID: bedroom.ID, Name: "Closet"}).(CreateChildLocationResult).Location
+
+	result := handler.HandleQuery(ctx, GetLocationPathQuery{LocationID: closet.ID}).(GetLocationPathResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if len(result.Path) != 3 {
+		t.Fatalf("expected path length 3, got %d", len(result.Path))
+	}
+	if result.Path[0].Name != "House" {
+		t.Errorf("expected 'House' at path[0], got '%s'", result.Path[0].Name)
+	}
+}
+
+func TestCreateItemWithLocation(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	catResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+	locResult := handler.HandleCommand(ctx, CreateRootLocationCommand{Name: "Shelf"}).(CreateRootLocationResult)
+
+	result := handler.HandleCommand(ctx, CreateItemCommand{
+		Name:       "Jar",
+		TypeID:     catResult.Type.ID,
+		LocationID: &locResult.Location.ID,
+		Quantity:   1.0,
+		UnitType:   domain.UnitTypeCount,
+	}).(CreateItemResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if result.Item.LocationID == nil {
+		t.Fatal("expected non-nil location_id on created item")
+	}
+	if *result.Item.LocationID != locResult.Location.ID {
+		t.Errorf("expected location_id %d, got %d", locResult.Location.ID, *result.Item.LocationID)
+	}
+}
+
+func TestCreateItemWithoutLocation(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	catResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+
+	result := handler.HandleCommand(ctx, CreateItemCommand{
+		Name:     "Spoon",
+		TypeID:   catResult.Type.ID,
+		Quantity: 1.0,
+		UnitType: domain.UnitTypeCount,
+	}).(CreateItemResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if result.Item.LocationID != nil {
+		t.Errorf("expected nil location_id, got %v", result.Item.LocationID)
+	}
+}
+
+func TestHandleListItemsByLocationQuery(t *testing.T) {
+	handler, cleanup := setupTestHandler(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	catResult := handler.HandleCommand(ctx, CreateRootTypeCommand{Name: "Kitchen"}).(CreateRootTypeResult)
+	shelfResult := handler.HandleCommand(ctx, CreateRootLocationCommand{Name: "Shelf"}).(CreateRootLocationResult)
+	drawerResult := handler.HandleCommand(ctx, CreateRootLocationCommand{Name: "Drawer"}).(CreateRootLocationResult)
+
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Book", TypeID: catResult.Type.ID, LocationID: &shelfResult.Location.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Magazine", TypeID: catResult.Type.ID, LocationID: &shelfResult.Location.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount})
+	handler.HandleCommand(ctx, CreateItemCommand{Name: "Pen", TypeID: catResult.Type.ID, LocationID: &drawerResult.Location.ID, Quantity: 1.0, UnitType: domain.UnitTypeCount})
+
+	result := handler.HandleQuery(ctx, ListItemsByLocationQuery{LocationID: shelfResult.Location.ID}).(ListItemsByLocationResult)
+
+	if result.Err != nil {
+		t.Fatalf("unexpected error: %v", result.Err)
+	}
+	if len(result.Items) != 2 {
+		t.Errorf("expected 2 items at shelf, got %d", len(result.Items))
+	}
+}

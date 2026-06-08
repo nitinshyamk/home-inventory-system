@@ -44,6 +44,22 @@ func (h *Handler) HandleQuery(ctx context.Context, q Query) QueryResult {
 		return h.handleListLeafTypes(ctx)
 	case GetCategoryChildSummaryQuery:
 		return h.handleGetCategoryChildSummary(ctx, query)
+	case GetLocationQuery:
+		return h.handleGetLocation(ctx, query)
+	case ListRootLocationsQuery:
+		return h.handleListRootLocations(ctx)
+	case ListChildLocationsQuery:
+		return h.handleListChildLocations(ctx, query)
+	case GetLocationPathQuery:
+		return h.handleGetLocationPath(ctx, query)
+	case IsLeafLocationQuery:
+		return h.handleIsLeafLocation(ctx, query)
+	case ListLeafLocationsQuery:
+		return h.handleListLeafLocations(ctx)
+	case ListItemsByLocationQuery:
+		return h.handleListItemsByLocation(ctx, query)
+	case CountItemsByLocationQuery:
+		return h.handleCountItemsByLocation(ctx, query)
 	default:
 		return nil
 	}
@@ -68,6 +84,12 @@ func (h *Handler) HandleCommand(ctx context.Context, c Command) CommandResult {
 		return h.handleDeleteItemType(ctx, cmd)
 	case DeleteCategoryWithLiftCommand:
 		return h.handleDeleteCategoryWithLift(ctx, cmd)
+	case CreateRootLocationCommand:
+		return h.handleCreateRootLocation(ctx, cmd)
+	case CreateChildLocationCommand:
+		return h.handleCreateChildLocation(ctx, cmd)
+	case DeleteLocationCommand:
+		return h.handleDeleteLocation(ctx, cmd)
 	default:
 		return nil
 	}
@@ -182,7 +204,7 @@ func (h *Handler) handleCreateItem(ctx context.Context, cmd CreateItemCommand) C
 		}
 	}
 
-	item, err := h.repo.CreateItem(ctx, cmd.Name, cmd.TypeID, cmd.Quantity, cmd.UnitType)
+	item, err := h.repo.CreateItem(ctx, cmd.Name, cmd.TypeID, cmd.LocationID, cmd.Quantity, cmd.UnitType)
 	return CreateItemResult{Item: item, Err: err}
 }
 
@@ -197,7 +219,7 @@ func (h *Handler) handleUpdateItem(ctx context.Context, cmd UpdateItemCommand) U
 			ValidationError: &ValidationError{Field: "quantity", Message: "Quantity must be greater than 0"},
 		}
 	}
-	if err := h.repo.UpdateItem(ctx, cmd.ID, cmd.Name, cmd.TypeID, cmd.Quantity, cmd.UnitType); err != nil {
+	if err := h.repo.UpdateItem(ctx, cmd.ID, cmd.Name, cmd.TypeID, cmd.LocationID, cmd.Quantity, cmd.UnitType); err != nil {
 		return UpdateItemResult{Err: err}
 	}
 	updated, err := h.repo.GetItem(ctx, cmd.ID)
@@ -232,4 +254,73 @@ func (h *Handler) handleDeleteCategoryWithLift(ctx context.Context, cmd DeleteCa
 func (h *Handler) handleDeleteItemType(ctx context.Context, cmd DeleteItemTypeCommand) DeleteItemTypeResult {
 	err := h.repo.DeleteItemType(ctx, cmd.ID)
 	return DeleteItemTypeResult{Err: err}
+}
+
+// --- Location Query Handlers ---
+
+func (h *Handler) handleGetLocation(ctx context.Context, q GetLocationQuery) GetLocationResult {
+	loc, err := h.repo.GetLocation(ctx, q.ID)
+	return GetLocationResult{Location: loc, Err: err}
+}
+
+func (h *Handler) handleListRootLocations(ctx context.Context) ListRootLocationsResult {
+	locs, err := h.repo.GetRootLocations(ctx)
+	return ListRootLocationsResult{Locations: locs, Err: err}
+}
+
+func (h *Handler) handleListChildLocations(ctx context.Context, q ListChildLocationsQuery) ListChildLocationsResult {
+	locs, err := h.repo.GetChildLocations(ctx, q.ParentID)
+	return ListChildLocationsResult{Locations: locs, Err: err}
+}
+
+func (h *Handler) handleGetLocationPath(ctx context.Context, q GetLocationPathQuery) GetLocationPathResult {
+	path, err := h.repo.GetLocationPath(ctx, q.LocationID)
+	return GetLocationPathResult{Path: path, Err: err}
+}
+
+func (h *Handler) handleIsLeafLocation(ctx context.Context, q IsLeafLocationQuery) IsLeafLocationResult {
+	isLeaf, err := h.repo.IsLeafLocation(ctx, q.LocationID)
+	return IsLeafLocationResult{IsLeaf: isLeaf, Err: err}
+}
+
+func (h *Handler) handleListLeafLocations(ctx context.Context) ListLeafLocationsResult {
+	locs, err := h.repo.ListLeafLocations(ctx)
+	return ListLeafLocationsResult{Locations: locs, Err: err}
+}
+
+func (h *Handler) handleListItemsByLocation(ctx context.Context, q ListItemsByLocationQuery) ListItemsByLocationResult {
+	items, err := h.repo.ListItemsByLocation(ctx, q.LocationID)
+	return ListItemsByLocationResult{Items: items, Err: err}
+}
+
+func (h *Handler) handleCountItemsByLocation(ctx context.Context, q CountItemsByLocationQuery) CountItemsByLocationResult {
+	count, err := h.repo.CountItemsByLocation(ctx, q.LocationID)
+	return CountItemsByLocationResult{Count: count, Err: err}
+}
+
+// --- Location Command Handlers ---
+
+func (h *Handler) handleCreateRootLocation(ctx context.Context, cmd CreateRootLocationCommand) CreateRootLocationResult {
+	if cmd.Name == "" {
+		return CreateRootLocationResult{
+			ValidationError: &ValidationError{Field: "name", Message: "Name is required"},
+		}
+	}
+	loc, err := h.repo.CreateRootLocation(ctx, cmd.Name, cmd.Description)
+	return CreateRootLocationResult{Location: loc, Err: err}
+}
+
+func (h *Handler) handleCreateChildLocation(ctx context.Context, cmd CreateChildLocationCommand) CreateChildLocationResult {
+	if cmd.Name == "" {
+		return CreateChildLocationResult{
+			ValidationError: &ValidationError{Field: "name", Message: "Name is required"},
+		}
+	}
+	loc, err := h.repo.CreateChildLocation(ctx, cmd.ParentID, cmd.Name, cmd.Description)
+	return CreateChildLocationResult{Location: loc, Err: err}
+}
+
+func (h *Handler) handleDeleteLocation(ctx context.Context, cmd DeleteLocationCommand) DeleteLocationResult {
+	err := h.repo.DeleteLocation(ctx, cmd.ID)
+	return DeleteLocationResult{Err: err}
 }

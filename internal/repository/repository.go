@@ -211,11 +211,12 @@ func (r *Repository) CountItemsByType(ctx context.Context, typeID int64) (int64,
 	return count, nil
 }
 
-// CreateItem creates a new item
-func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64, quantity float64, unitType domain.UnitType) (*domain.Item, error) {
+// CreateItem creates a new item with an optional location
+func (r *Repository) CreateItem(ctx context.Context, name string, typeID int64, locationID *int64, quantity float64, unitType domain.UnitType) (*domain.Item, error) {
 	row, err := r.queries.CreateItem(ctx, sqlc.CreateItemParams{
 		Name:       name,
 		ItemTypeID: typeID,
+		LocationID: toNullInt64Ptr(locationID),
 		Quantity:   quantity,
 		UnitType:   unitType.String(),
 	})
@@ -345,10 +346,10 @@ func toNullInt64(n sql.NullInt64) interface{} {
 	return nil
 }
 
-// UpdateItem updates an existing item's name, type, quantity, and unit type.
+// UpdateItem updates an existing item's name, type, location, quantity, and unit type.
 // Validates that the target type has no children (structural leaf check) since
 // the enforce_leaf_node_on_update trigger was dropped in migration 00003.
-func (r *Repository) UpdateItem(ctx context.Context, id int64, name string, typeID int64, quantity float64, unitType domain.UnitType) error {
+func (r *Repository) UpdateItem(ctx context.Context, id int64, name string, typeID int64, locationID *int64, quantity float64, unitType domain.UnitType) error {
 	childCount, err := r.queries.CountChildItemTypes(ctx, sql.NullInt64{Int64: typeID, Valid: true})
 	if err != nil {
 		return fmt.Errorf("failed to check leaf status: %w", err)
@@ -360,6 +361,7 @@ func (r *Repository) UpdateItem(ctx context.Context, id int64, name string, type
 		ID:         id,
 		Name:       name,
 		ItemTypeID: typeID,
+		LocationID: toNullInt64Ptr(locationID),
 		Quantity:   quantity,
 		UnitType:   unitType.String(),
 	})
@@ -465,6 +467,7 @@ func convertGetItemRow(row sqlc.GetItemRow) domain.Item {
 		ID:         row.ID,
 		Name:       row.Name,
 		ItemTypeID: row.ItemTypeID,
+		LocationID: toOptionalInt64(row.LocationID),
 		Quantity:   row.Quantity,
 		UnitType:   domain.UnitType(row.UnitType),
 		CreatedAt:  row.CreatedAt,
@@ -477,6 +480,7 @@ func convertCreateItemRow(row sqlc.CreateItemRow) domain.Item {
 		ID:         row.ID,
 		Name:       row.Name,
 		ItemTypeID: row.ItemTypeID,
+		LocationID: toOptionalInt64(row.LocationID),
 		Quantity:   row.Quantity,
 		UnitType:   domain.UnitType(row.UnitType),
 		CreatedAt:  row.CreatedAt,
@@ -489,6 +493,7 @@ func convertListItemsByTypeRow(row sqlc.ListItemsByTypeRow) domain.Item {
 		ID:         row.ID,
 		Name:       row.Name,
 		ItemTypeID: row.ItemTypeID,
+		LocationID: toOptionalInt64(row.LocationID),
 		Quantity:   row.Quantity,
 		UnitType:   domain.UnitType(row.UnitType),
 		CreatedAt:  row.CreatedAt,
@@ -501,4 +506,238 @@ func toNullString(s string) sql.NullString {
 		return sql.NullString{}
 	}
 	return sql.NullString{String: s, Valid: true}
+}
+
+// toNullInt64Ptr converts a *int64 to sql.NullInt64
+func toNullInt64Ptr(p *int64) sql.NullInt64 {
+	if p == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: *p, Valid: true}
+}
+
+// toOptionalInt64 converts a sql.NullInt64 to *int64
+func toOptionalInt64(n sql.NullInt64) *int64 {
+	if !n.Valid {
+		return nil
+	}
+	v := n.Int64
+	return &v
+}
+
+// convertLocation converts a sqlc.Location to a domain.Location
+func convertLocation(row sqlc.Location) domain.Location {
+	var parentID *int64
+	if row.ParentID.Valid {
+		parentID = &row.ParentID.Int64
+	}
+	var desc string
+	if row.Description.Valid {
+		desc = row.Description.String
+	}
+	return domain.Location{
+		ID:          row.ID,
+		ParentID:    parentID,
+		Name:        row.Name,
+		Description: desc,
+		Depth:       row.Depth,
+		CreatedAt:   row.CreatedAt,
+	}
+}
+
+// convertLocations converts a slice of sqlc.Location to []domain.Location
+func convertLocations(rows []sqlc.Location) []domain.Location {
+	locs := make([]domain.Location, len(rows))
+	for i, row := range rows {
+		locs[i] = convertLocation(row)
+	}
+	return locs
+}
+
+// GetLocation returns a single location by ID
+func (r *Repository) GetLocation(ctx context.Context, id int64) (*domain.Location, error) {
+	row, err := r.queries.GetLocation(ctx, id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("location not found: %d", id)
+		}
+		return nil, fmt.Errorf("failed to get location: %w", err)
+	}
+	loc := convertLocation(row)
+	return &loc, nil
+}
+
+// GetRootLocations returns all root-level locations (no parent)
+func (r *Repository) GetRootLocations(ctx context.Context) ([]domain.Location, error) {
+	rows, err := r.queries.ListRootLocations(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list root locations: %w", err)
+	}
+	return convertLocations(rows), nil
+}
+
+// GetChildLocations returns all direct children of a parent location
+func (r *Repository) GetChildLocations(ctx context.Context, parentID int64) ([]domain.Location, error) {
+	rows, err := r.queries.ListChildLocations(ctx, sql.NullInt64{Int64: parentID, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list child locations: %w", err)
+	}
+	return convertLocations(rows), nil
+}
+
+// GetLocationPath returns the breadcrumb path from root to the given location
+func (r *Repository) GetLocationPath(ctx context.Context, locationID int64) ([]domain.Location, error) {
+	rows, err := r.queries.GetLocationPath(ctx, locationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get location path: %w", err)
+	}
+	locs := make([]domain.Location, len(rows))
+	for i, row := range rows {
+		var parentID *int64
+		if row.ParentID.Valid {
+			parentID = &row.ParentID.Int64
+		}
+		var desc string
+		if row.Description.Valid {
+			desc = row.Description.String
+		}
+		locs[i] = domain.Location{
+			ID:          row.ID,
+			ParentID:    parentID,
+			Name:        row.Name,
+			Description: desc,
+			Depth:       row.Depth,
+			CreatedAt:   row.CreatedAt,
+		}
+	}
+	return locs, nil
+}
+
+// IsLeafLocation checks if a location contains items (making it a leaf node)
+func (r *Repository) IsLeafLocation(ctx context.Context, locationID int64) (bool, error) {
+	result, err := r.queries.IsLeafLocation(ctx, sql.NullInt64{Int64: locationID, Valid: true})
+	if err != nil {
+		return false, fmt.Errorf("failed to check location leaf status: %w", err)
+	}
+	return result == 1, nil
+}
+
+// ListLeafLocations returns all locations that have no children
+func (r *Repository) ListLeafLocations(ctx context.Context) ([]domain.Location, error) {
+	rows, err := r.queries.ListLeafLocations(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list leaf locations: %w", err)
+	}
+	return convertLocations(rows), nil
+}
+
+// CountChildLocations returns the number of direct children of a location
+func (r *Repository) CountChildLocations(ctx context.Context, parentID int64) (int64, error) {
+	count, err := r.queries.CountChildLocations(ctx, sql.NullInt64{Int64: parentID, Valid: true})
+	if err != nil {
+		return 0, fmt.Errorf("failed to count child locations: %w", err)
+	}
+	return count, nil
+}
+
+// GetLocationDescendants returns all descendants of a location (including itself)
+func (r *Repository) GetLocationDescendants(ctx context.Context, locationID int64) ([]domain.Location, error) {
+	rows, err := r.queries.GetLocationDescendants(ctx, locationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get location descendants: %w", err)
+	}
+	locs := make([]domain.Location, len(rows))
+	for i, row := range rows {
+		var parentID *int64
+		if row.ParentID.Valid {
+			parentID = &row.ParentID.Int64
+		}
+		var desc string
+		if row.Description.Valid {
+			desc = row.Description.String
+		}
+		locs[i] = domain.Location{
+			ID:          row.ID,
+			ParentID:    parentID,
+			Name:        row.Name,
+			Description: desc,
+			Depth:       row.Depth,
+			CreatedAt:   row.CreatedAt,
+		}
+	}
+	return locs, nil
+}
+
+// CreateRootLocation creates a new root-level location
+func (r *Repository) CreateRootLocation(ctx context.Context, name, description string) (*domain.Location, error) {
+	row, err := r.queries.CreateRootLocation(ctx, sqlc.CreateRootLocationParams{
+		Name:        name,
+		Description: toNullString(description),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create root location: %w", err)
+	}
+	loc := convertLocation(row)
+	return &loc, nil
+}
+
+// CreateChildLocation creates a new child location under a parent
+func (r *Repository) CreateChildLocation(ctx context.Context, parentID int64, name, description string) (*domain.Location, error) {
+	parent, err := r.queries.GetLocation(ctx, parentID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("parent location not found: %d", parentID)
+		}
+		return nil, fmt.Errorf("failed to get parent location: %w", err)
+	}
+	row, err := r.queries.CreateLocation(ctx, sqlc.CreateLocationParams{
+		ParentID:    sql.NullInt64{Int64: parentID, Valid: true},
+		Name:        name,
+		Description: toNullString(description),
+		Depth:       parent.Depth + 1,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create child location: %w", err)
+	}
+	loc := convertLocation(row)
+	return &loc, nil
+}
+
+// DeleteLocation deletes a location by ID
+func (r *Repository) DeleteLocation(ctx context.Context, id int64) error {
+	err := r.queries.DeleteLocation(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete location: %w", err)
+	}
+	return nil
+}
+
+// ListItemsByLocation returns all items assigned to a specific location
+func (r *Repository) ListItemsByLocation(ctx context.Context, locationID int64) ([]domain.Item, error) {
+	rows, err := r.queries.ListItemsByLocation(ctx, sql.NullInt64{Int64: locationID, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list items by location: %w", err)
+	}
+	items := make([]domain.Item, len(rows))
+	for i, row := range rows {
+		items[i] = domain.Item{
+			ID:         row.ID,
+			Name:       row.Name,
+			ItemTypeID: row.ItemTypeID,
+			LocationID: toOptionalInt64(row.LocationID),
+			Quantity:   row.Quantity,
+			UnitType:   domain.UnitType(row.UnitType),
+			CreatedAt:  row.CreatedAt,
+		}
+	}
+	return items, nil
+}
+
+// CountItemsByLocation returns the number of items assigned to a specific location
+func (r *Repository) CountItemsByLocation(ctx context.Context, locationID int64) (int64, error) {
+	count, err := r.queries.CountItemsByLocation(ctx, sql.NullInt64{Int64: locationID, Valid: true})
+	if err != nil {
+		return 0, fmt.Errorf("failed to count items by location: %w", err)
+	}
+	return count, nil
 }

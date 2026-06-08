@@ -24,31 +24,34 @@ func (q *Queries) CountItemsByType(ctx context.Context, itemTypeID int64) (int64
 }
 
 const createItem = `-- name: CreateItem :one
-INSERT INTO items (name, item_type_id, quantity, unit_type)
-VALUES (?, ?, ?, ?)
-RETURNING id, name, item_type_id, quantity, unit_type, created_at
+INSERT INTO items (name, item_type_id, location_id, quantity, unit_type)
+VALUES (?, ?, ?, ?, ?)
+RETURNING id, name, item_type_id, location_id, quantity, unit_type, created_at
 `
 
 type CreateItemParams struct {
-	Name       string  `json:"name"`
-	ItemTypeID int64   `json:"item_type_id"`
-	Quantity   float64 `json:"quantity"`
-	UnitType   string  `json:"unit_type"`
+	Name       string        `json:"name"`
+	ItemTypeID int64         `json:"item_type_id"`
+	LocationID sql.NullInt64 `json:"location_id"`
+	Quantity   float64       `json:"quantity"`
+	UnitType   string        `json:"unit_type"`
 }
 
 type CreateItemRow struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	ItemTypeID int64   `json:"item_type_id"`
-	Quantity   float64 `json:"quantity"`
-	UnitType   string  `json:"unit_type"`
-	CreatedAt  string  `json:"created_at"`
+	ID         int64         `json:"id"`
+	Name       string        `json:"name"`
+	ItemTypeID int64         `json:"item_type_id"`
+	LocationID sql.NullInt64 `json:"location_id"`
+	Quantity   float64       `json:"quantity"`
+	UnitType   string        `json:"unit_type"`
+	CreatedAt  string        `json:"created_at"`
 }
 
 func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (CreateItemRow, error) {
 	row := q.db.QueryRowContext(ctx, createItem,
 		arg.Name,
 		arg.ItemTypeID,
+		arg.LocationID,
 		arg.Quantity,
 		arg.UnitType,
 	)
@@ -57,6 +60,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (CreateI
 		&i.ID,
 		&i.Name,
 		&i.ItemTypeID,
+		&i.LocationID,
 		&i.Quantity,
 		&i.UnitType,
 		&i.CreatedAt,
@@ -74,18 +78,19 @@ func (q *Queries) DeleteItem(ctx context.Context, id int64) error {
 }
 
 const getItem = `-- name: GetItem :one
-SELECT id, name, item_type_id, quantity, unit_type, created_at
+SELECT id, name, item_type_id, location_id, quantity, unit_type, created_at
 FROM items
 WHERE id = ?
 `
 
 type GetItemRow struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	ItemTypeID int64   `json:"item_type_id"`
-	Quantity   float64 `json:"quantity"`
-	UnitType   string  `json:"unit_type"`
-	CreatedAt  string  `json:"created_at"`
+	ID         int64         `json:"id"`
+	Name       string        `json:"name"`
+	ItemTypeID int64         `json:"item_type_id"`
+	LocationID sql.NullInt64 `json:"location_id"`
+	Quantity   float64       `json:"quantity"`
+	UnitType   string        `json:"unit_type"`
+	CreatedAt  string        `json:"created_at"`
 }
 
 func (q *Queries) GetItem(ctx context.Context, id int64) (GetItemRow, error) {
@@ -95,6 +100,7 @@ func (q *Queries) GetItem(ctx context.Context, id int64) (GetItemRow, error) {
 		&i.ID,
 		&i.Name,
 		&i.ItemTypeID,
+		&i.LocationID,
 		&i.Quantity,
 		&i.UnitType,
 		&i.CreatedAt,
@@ -103,18 +109,19 @@ func (q *Queries) GetItem(ctx context.Context, id int64) (GetItemRow, error) {
 }
 
 const listItems = `-- name: ListItems :many
-SELECT id, name, item_type_id, quantity, unit_type, created_at
+SELECT id, name, item_type_id, location_id, quantity, unit_type, created_at
 FROM items
 ORDER BY name
 `
 
 type ListItemsRow struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	ItemTypeID int64   `json:"item_type_id"`
-	Quantity   float64 `json:"quantity"`
-	UnitType   string  `json:"unit_type"`
-	CreatedAt  string  `json:"created_at"`
+	ID         int64         `json:"id"`
+	Name       string        `json:"name"`
+	ItemTypeID int64         `json:"item_type_id"`
+	LocationID sql.NullInt64 `json:"location_id"`
+	Quantity   float64       `json:"quantity"`
+	UnitType   string        `json:"unit_type"`
+	CreatedAt  string        `json:"created_at"`
 }
 
 func (q *Queries) ListItems(ctx context.Context) ([]ListItemsRow, error) {
@@ -130,6 +137,7 @@ func (q *Queries) ListItems(ctx context.Context) ([]ListItemsRow, error) {
 			&i.ID,
 			&i.Name,
 			&i.ItemTypeID,
+			&i.LocationID,
 			&i.Quantity,
 			&i.UnitType,
 			&i.CreatedAt,
@@ -148,19 +156,20 @@ func (q *Queries) ListItems(ctx context.Context) ([]ListItemsRow, error) {
 }
 
 const listItemsByType = `-- name: ListItemsByType :many
-SELECT id, name, item_type_id, quantity, unit_type, created_at
+SELECT id, name, item_type_id, location_id, quantity, unit_type, created_at
 FROM items
 WHERE item_type_id = ?
 ORDER BY name
 `
 
 type ListItemsByTypeRow struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	ItemTypeID int64   `json:"item_type_id"`
-	Quantity   float64 `json:"quantity"`
-	UnitType   string  `json:"unit_type"`
-	CreatedAt  string  `json:"created_at"`
+	ID         int64         `json:"id"`
+	Name       string        `json:"name"`
+	ItemTypeID int64         `json:"item_type_id"`
+	LocationID sql.NullInt64 `json:"location_id"`
+	Quantity   float64       `json:"quantity"`
+	UnitType   string        `json:"unit_type"`
+	CreatedAt  string        `json:"created_at"`
 }
 
 func (q *Queries) ListItemsByType(ctx context.Context, itemTypeID int64) ([]ListItemsByTypeRow, error) {
@@ -176,6 +185,7 @@ func (q *Queries) ListItemsByType(ctx context.Context, itemTypeID int64) ([]List
 			&i.ID,
 			&i.Name,
 			&i.ItemTypeID,
+			&i.LocationID,
 			&i.Quantity,
 			&i.UnitType,
 			&i.CreatedAt,
@@ -198,6 +208,7 @@ SELECT
     i.id,
     i.name,
     i.item_type_id,
+    i.location_id,
     i.quantity,
     i.unit_type,
     i.created_at,
@@ -213,6 +224,7 @@ type ListItemsWithTypeRow struct {
 	ID           int64         `json:"id"`
 	Name         string        `json:"name"`
 	ItemTypeID   int64         `json:"item_type_id"`
+	LocationID   sql.NullInt64 `json:"location_id"`
 	Quantity     float64       `json:"quantity"`
 	UnitType     string        `json:"unit_type"`
 	CreatedAt    string        `json:"created_at"`
@@ -234,6 +246,7 @@ func (q *Queries) ListItemsWithType(ctx context.Context) ([]ListItemsWithTypeRow
 			&i.ID,
 			&i.Name,
 			&i.ItemTypeID,
+			&i.LocationID,
 			&i.Quantity,
 			&i.UnitType,
 			&i.CreatedAt,
@@ -259,6 +272,7 @@ SELECT
     i.id,
     i.name,
     i.item_type_id,
+    i.location_id,
     i.quantity,
     i.unit_type,
     i.created_at,
@@ -274,6 +288,7 @@ type ListItemsWithTypePathRow struct {
 	ID           int64         `json:"id"`
 	Name         string        `json:"name"`
 	ItemTypeID   int64         `json:"item_type_id"`
+	LocationID   sql.NullInt64 `json:"location_id"`
 	Quantity     float64       `json:"quantity"`
 	UnitType     string        `json:"unit_type"`
 	CreatedAt    string        `json:"created_at"`
@@ -295,6 +310,7 @@ func (q *Queries) ListItemsWithTypePath(ctx context.Context) ([]ListItemsWithTyp
 			&i.ID,
 			&i.Name,
 			&i.ItemTypeID,
+			&i.LocationID,
 			&i.Quantity,
 			&i.UnitType,
 			&i.CreatedAt,
@@ -317,22 +333,24 @@ func (q *Queries) ListItemsWithTypePath(ctx context.Context) ([]ListItemsWithTyp
 
 const updateItem = `-- name: UpdateItem :exec
 UPDATE items
-SET name = ?, item_type_id = ?, quantity = ?, unit_type = ?
+SET name = ?, item_type_id = ?, location_id = ?, quantity = ?, unit_type = ?
 WHERE id = ?
 `
 
 type UpdateItemParams struct {
-	Name       string  `json:"name"`
-	ItemTypeID int64   `json:"item_type_id"`
-	Quantity   float64 `json:"quantity"`
-	UnitType   string  `json:"unit_type"`
-	ID         int64   `json:"id"`
+	Name       string        `json:"name"`
+	ItemTypeID int64         `json:"item_type_id"`
+	LocationID sql.NullInt64 `json:"location_id"`
+	Quantity   float64       `json:"quantity"`
+	UnitType   string        `json:"unit_type"`
+	ID         int64         `json:"id"`
 }
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) error {
 	_, err := q.db.ExecContext(ctx, updateItem,
 		arg.Name,
 		arg.ItemTypeID,
+		arg.LocationID,
 		arg.Quantity,
 		arg.UnitType,
 		arg.ID,

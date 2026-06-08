@@ -200,21 +200,23 @@ func (CreateChildTypeCommand) isCommand() {}
 
 // CreateItemCommand creates a new item
 type CreateItemCommand struct {
-	Name     string
-	TypeID   int64
-	Quantity float64         // Numeric quantity (supports decimals)
-	UnitType domain.UnitType // Unit of measurement
+	Name       string
+	TypeID     int64
+	LocationID *int64          // optional
+	Quantity   float64         // Numeric quantity (supports decimals)
+	UnitType   domain.UnitType // Unit of measurement
 }
 
 func (CreateItemCommand) isCommand() {}
 
 // UpdateItemCommand updates an existing item's fields
 type UpdateItemCommand struct {
-	ID       int64
-	Name     string
-	TypeID   int64
-	Quantity float64
-	UnitType domain.UnitType
+	ID         int64
+	Name       string
+	TypeID     int64
+	LocationID *int64 // optional
+	Quantity   float64
+	UnitType   domain.UnitType
 }
 
 func (UpdateItemCommand) isCommand() {}
@@ -322,3 +324,176 @@ type DeleteItemTypeResult struct {
 }
 
 func (DeleteItemTypeResult) isCommandResult() {}
+
+// --- Location Queries ---
+
+// GetLocationQuery requests a single location by ID
+type GetLocationQuery struct {
+	ID int64
+}
+
+func (GetLocationQuery) isQuery() {}
+
+// ListRootLocationsQuery requests all root-level locations
+type ListRootLocationsQuery struct{}
+
+func (ListRootLocationsQuery) isQuery() {}
+
+// ListChildLocationsQuery requests all direct children of a parent location
+type ListChildLocationsQuery struct {
+	ParentID int64
+}
+
+func (ListChildLocationsQuery) isQuery() {}
+
+// GetLocationPathQuery requests the breadcrumb path from root to a location
+type GetLocationPathQuery struct {
+	LocationID int64
+}
+
+func (GetLocationPathQuery) isQuery() {}
+
+// IsLeafLocationQuery checks if a location has items (making it a leaf)
+type IsLeafLocationQuery struct {
+	LocationID int64
+}
+
+func (IsLeafLocationQuery) isQuery() {}
+
+// ListLeafLocationsQuery requests all locations that have no children
+type ListLeafLocationsQuery struct{}
+
+func (ListLeafLocationsQuery) isQuery() {}
+
+// ListItemsByLocationQuery requests all items at a specific location
+type ListItemsByLocationQuery struct {
+	LocationID int64
+}
+
+func (ListItemsByLocationQuery) isQuery() {}
+
+// CountItemsByLocationQuery requests the count of items at a location
+type CountItemsByLocationQuery struct {
+	LocationID int64
+}
+
+func (CountItemsByLocationQuery) isQuery() {}
+
+// --- Location Query Results ---
+
+// GetLocationResult contains the result of GetLocationQuery
+type GetLocationResult struct {
+	Location *domain.Location
+	Err      error
+}
+
+func (GetLocationResult) isQueryResult() {}
+
+// ListRootLocationsResult contains the result of ListRootLocationsQuery
+type ListRootLocationsResult struct {
+	Locations []domain.Location
+	Err       error
+}
+
+func (ListRootLocationsResult) isQueryResult() {}
+
+// ListChildLocationsResult contains the result of ListChildLocationsQuery
+type ListChildLocationsResult struct {
+	Locations []domain.Location
+	Err       error
+}
+
+func (ListChildLocationsResult) isQueryResult() {}
+
+// GetLocationPathResult contains the breadcrumb path result
+type GetLocationPathResult struct {
+	Path []domain.Location
+	Err  error
+}
+
+func (GetLocationPathResult) isQueryResult() {}
+
+// IsLeafLocationResult contains the leaf check result
+type IsLeafLocationResult struct {
+	IsLeaf bool
+	Err    error
+}
+
+func (IsLeafLocationResult) isQueryResult() {}
+
+// ListLeafLocationsResult contains all leaf locations
+type ListLeafLocationsResult struct {
+	Locations []domain.Location
+	Err       error
+}
+
+func (ListLeafLocationsResult) isQueryResult() {}
+
+// ListItemsByLocationResult contains items for a specific location
+type ListItemsByLocationResult struct {
+	Items []domain.Item
+	Err   error
+}
+
+func (ListItemsByLocationResult) isQueryResult() {}
+
+// CountItemsByLocationResult contains the item count for a location
+type CountItemsByLocationResult struct {
+	Count int64
+	Err   error
+}
+
+func (CountItemsByLocationResult) isQueryResult() {}
+
+// --- Location Commands ---
+
+// CreateRootLocationCommand creates a new root-level location
+type CreateRootLocationCommand struct {
+	Name        string
+	Description string
+}
+
+func (CreateRootLocationCommand) isCommand() {}
+
+// CreateChildLocationCommand creates a new child location
+type CreateChildLocationCommand struct {
+	ParentID    int64
+	Name        string
+	Description string
+}
+
+func (CreateChildLocationCommand) isCommand() {}
+
+// DeleteLocationCommand deletes a location
+type DeleteLocationCommand struct {
+	ID int64
+}
+
+func (DeleteLocationCommand) isCommand() {}
+
+// --- Location Command Results ---
+
+// CreateRootLocationResult contains the created root location
+type CreateRootLocationResult struct {
+	Location        *domain.Location
+	ValidationError *ValidationError
+	Err             error
+}
+
+func (CreateRootLocationResult) isCommandResult() {}
+
+// CreateChildLocationResult contains the created child location
+type CreateChildLocationResult struct {
+	Location        *domain.Location
+	ValidationError *ValidationError
+	Err             error
+}
+
+func (CreateChildLocationResult) isCommandResult() {}
+
+// DeleteLocationResult contains the delete operation result
+type DeleteLocationResult struct {
+	Err error
+}
+
+func (DeleteLocationResult) isCommandResult() {}

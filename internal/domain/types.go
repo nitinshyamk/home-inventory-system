@@ -39,7 +39,18 @@ type Item struct {
 	ID         int64
 	Name       string
 	ItemTypeID int64
+	LocationID *int64   // nil if no location assigned
 	Quantity   float64  // Numeric quantity (supports decimals)
 	UnitType   UnitType // Unit of measurement
 	CreatedAt  string
+}
+
+// Location represents a physical location in a hierarchy
+type Location struct {
+	ID          int64
+	ParentID    *int64 // nil for root locations
+	Name        string
+	Description string // empty string if not set
+	Depth       int64
+	CreatedAt   string
 }

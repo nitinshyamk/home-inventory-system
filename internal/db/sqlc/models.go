@@ -9,15 +9,25 @@ import (
 )
 
 type Item struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	ItemTypeID int64   `json:"item_type_id"`
-	CreatedAt  string  `json:"created_at"`
-	Quantity   float64 `json:"quantity"`
-	UnitType   string  `json:"unit_type"`
+	ID         int64         `json:"id"`
+	Name       string        `json:"name"`
+	ItemTypeID int64         `json:"item_type_id"`
+	CreatedAt  string        `json:"created_at"`
+	Quantity   float64       `json:"quantity"`
+	UnitType   string        `json:"unit_type"`
+	LocationID sql.NullInt64 `json:"location_id"`
 }
 
 type ItemType struct {
+	ID          int64          `json:"id"`
+	ParentID    sql.NullInt64  `json:"parent_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Depth       int64          `json:"depth"`
+	CreatedAt   string         `json:"created_at"`
+}
+
+type Location struct {
 	ID          int64          `json:"id"`
 	ParentID    sql.NullInt64  `json:"parent_id"`
 	Name        string         `json:"name"`

@@ -184,7 +184,7 @@ func insertNode(ctx context.Context, repo *repository.Repository, node Node, par
 
 	// Insert items at this node
 	for _, item := range node.Items {
-		if _, err := repo.CreateItem(ctx, item.Name, itemType.ID, item.Quantity, item.Unit); err != nil {
+		if _, err := repo.CreateItem(ctx, item.Name, itemType.ID, nil, item.Quantity, item.Unit); err != nil {
 			return fmt.Errorf("failed to create item %s: %w", item.Name, err)
 		}
 	}
